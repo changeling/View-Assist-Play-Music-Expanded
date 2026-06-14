@@ -1,0 +1,2051 @@
+# =============================================================================
+# View Assist - Play Music with Music Assistant (Expanded)
+# Version: 0.1.0
+# Date:    2026-06-14
+# Based on: dinki's "Play Music with Music Assistant" v1.2.7
+# Changelog: see CHANGELOG.md
+# Status: beta (0.x) - commands and behavior may change before 1.0.0
+# =============================================================================
+blueprint:
+  name: View Assist - Play Music with Music Assistant Expanded
+  description:
+    Voice control for Music Assistant from a View Assist satellite - play music,
+    control playback, manage the queue, move audio between rooms, make
+    announcements, and more. Expanded edition v0.1.0, based on Play Music with
+    Music Assistant v1.2.7. See CHANGELOG.md for the full list of changes.
+  domain: automation
+  input:
+    ma_instance:
+      name: Music Assistant Instance
+      description: Select the Music Assistant instance
+      selector:
+        config_entry:
+          integration: music_assistant
+    view_path:
+      name: Dashboard Info view
+      description:
+        The View Assist dashboard view to use for displaying music information
+        (example /view-assist/music)
+      default: /view-assist/music
+    language:
+      name: Language
+      description: The desired spoken language
+      default: en
+      selector:
+        language:
+          languages:
+            - ca
+            - de
+            - en
+            - es
+            - nl
+            - pl
+            - pt
+            - ro
+          no_sort: false
+          native_name: false
+    play_artist_command:
+      name: Play Artist Command
+      description: The command to trigger the play artist action
+      default:
+        (play the artist {artist} | play some {artist} [music] |play [some]
+        [music | songs] by {artist})
+    play_playlist_command:
+      name: Play Playlist Command
+      description: The command to trigger the play playlist action
+      # >>>>> MODIFIED: added "play" as an alternative verb to "start" >>>>>
+      default: (start | play) [the] {playlist} playlist
+      # <<<<< MODIFIED END <<<<<
+    play_song_command:
+      name: Play Song Command
+      description: The command to trigger the play song action
+      default: play {song} by {artist}
+    queue_song_command:
+      name: Queue Song Command
+      description: The command to trigger the queue song action
+      default: (queue | cue | Q) {song} by {artist}
+    # >>>>> NEW CODE BEGIN (Tier 2 play_media inputs) >>>>>
+    play_album_command:
+      name: Play Album Command
+      description: The command to play an album, optionally by a named artist
+      default: (play [the] album {album} by {artist} | play [the] album {album})
+    play_radio_command:
+      name: Play Radio Station Command
+      description: The command to play a radio station by name
+      default: (play [the] radio station {radio} | start [the] radio station {radio} | play {radio} (radio | station))
+    radio_mode_command:
+      name: Radio Mode Command
+      description:
+        The command to start radio mode seeded from an artist. Music Assistant
+        builds a continuous mix based on the artist.
+      default: (play | start) [a] radio [mode] (based on | for | from) {artist}
+    add_song_command:
+      name: Add Song To Queue Command
+      description:
+        The command to add a song to the end of the queue. Distinct from the
+        Queue Song command, which inserts the song to play next.
+      default: (add | append) {song} by {artist} [to [the] [end of [the]] queue]
+    # <<<<< NEW CODE END (Tier 2 play_media inputs) <<<<<
+    # >>>>> NEW CODE BEGIN (Tier 2 transfer_queue inputs) >>>>>
+    transfer_target_command:
+      name: Transfer To Target Command
+      description:
+        Move the currently playing music to a named room/player. {target} is
+        resolved against the Join Alias Map first, then against Music Assistant
+        player friendly names.
+      default: (move | transfer | send) [the] (music | queue | playback | song) to [the] {target} [(speaker | device | room)]
+    transfer_here_command:
+      name: Transfer Here Command
+      description:
+        Move the currently playing music to this satellite's player. No spoken
+        room name required.
+      default: (move | transfer | send | bring) [the] (music | queue | playback | song) (here | to this (room | speaker | device)) [too]
+    # <<<<< NEW CODE END (Tier 2 transfer_queue inputs) <<<<<
+    # >>>>> NEW CODE BEGIN (Tier 2 favorite + now playing inputs) >>>>>
+    favorite_song_command:
+      name: Favorite Current Song Command
+      description:
+        Favorite the song currently playing on this satellite's player. The
+        favorite button entity is resolved dynamically from the player's
+        device, so nothing needs to be configured.
+      default: (favorite | favourite | like) [this] (song | track)
+    now_playing_command:
+      name: Now Playing Command
+      description:
+        Say what is currently playing, read from the active player. Checks this
+        satellite's player first and otherwise the first player found playing.
+      default: (what's | what is) playing [now | right now]
+    # <<<<< NEW CODE END (Tier 2 favorite + now playing inputs) <<<<<
+    # >>>>> NEW CODE BEGIN (Tier 2 announcement inputs) >>>>>
+    announcement_command:
+      name: Announce (TTS) Command
+      description:
+        Speak an announcement out loud. The text you say is spoken back through
+        the satellite's own voice pipeline, so no TTS engine needs configuring.
+      default: (announce | say | broadcast) {message}
+    announcement_url_command:
+      name: Announce Sound (URL) Command
+      description:
+        Play a named pre-recorded announcement sound. The spoken name is looked
+        up in the Announcement Sound Map below. Optional; does nothing until
+        that map has entries.
+      default: play [the] {name} (announcement | sound | chime)
+    announcement_url_map:
+      name: Announcement Sound Map
+      description:
+        Optional map of spoken names to announcement sound URLs, used by the
+        Announce Sound command. Each key is a spoken name and each value a URL
+        to an audio file. Leave empty if you only use spoken announcements.
+      default: {}
+      selector:
+        object:
+    # <<<<< NEW CODE END (Tier 2 announcement inputs) <<<<<
+    # >>>>> NEW CODE BEGIN (Tier 2 get_library + queue lookahead inputs) >>>>>
+    play_random_command:
+      name: Play Random Music Command
+      description: Queue a set of random tracks from the library and play them.
+      default: (play | start) [some] random (music | songs | tracks)
+    whats_next_command:
+      name: What's Next Command
+      description: Say the next few upcoming tracks in the queue.
+      default: ((what's | what is) (next | coming up) | (what's | what is) in the queue)
+    random_count:
+      name: Random Track Count
+      description: How many tracks to queue for the play random music command.
+      default: 25
+      selector:
+        number:
+          min: 1
+          max: 100
+          mode: box
+    # <<<<< NEW CODE END (Tier 2 get_library + queue lookahead inputs) <<<<<
+    # >>>>> NEW CODE BEGIN (Tier 3 inputs) >>>>>
+    shuffle_on_command:
+      name: Shuffle On Command
+      description: The command to turn shuffle on
+      default: (shuffle on | turn on shuffle | enable shuffle | shuffle [my] [music | songs])
+    shuffle_off_command:
+      name: Shuffle Off Command
+      description: The command to turn shuffle off
+      default: (shuffle off | turn off shuffle | disable shuffle | stop shuffling)
+    repeat_off_command:
+      name: Repeat Off Command
+      description: The command to turn repeat off
+      default: (repeat off | turn off repeat | disable repeat | stop repeating)
+    repeat_one_command:
+      name: Repeat One Command
+      description: The command to repeat the current track
+      default: (repeat (this | the) (song | track) | repeat one)
+    repeat_all_command:
+      name: Repeat All Command
+      description: The command to repeat the whole queue
+      default: (repeat all | repeat (the) (queue | playlist) | repeat everything)
+    clear_queue_command:
+      name: Clear Queue Command
+      description: The command to clear the playback queue
+      default: (clear | empty) [the] queue
+    stop_command:
+      name: Stop Command
+      description: The command to stop playback
+      default: (stop [the] (music | playback) | stop playing)
+    select_source_command:
+      name: Select Source Command
+      description:
+        The command to change the player's source. The spoken source must
+        match a source the player exposes, so this is the most fragile of the
+        controls and may need per-player tuning.
+      default: (set | change | switch) [the] source to {source}
+    join_target_command:
+      name: Join Target Command
+      description:
+        Add a named room/player to the music that is currently playing.
+        {target} is resolved against the Join Alias Map first, then against
+        Music Assistant player friendly names.
+      default: (join | add | group | sync) [the] {target} [(speaker | device | room)] [to [the] (group | music)]
+    join_here_command:
+      name: Play Here Too Command
+      description:
+        Add this satellite's player to whatever is currently playing. No
+        spoken room name required. Avoids the verbs join/add/group/sync so it
+        cannot collide with the named command above.
+      default: (play here too | also play here | play [the] music here [too] | play here as well)
+    unjoin_command:
+      name: Unjoin Command
+      description: Remove this satellite's player from its current group
+      default: (unjoin | leave [the] group | ungroup [this] [(room | speaker | device)] | stop joining)
+    join_alias_map:
+      name: Join Alias Map
+      description:
+        Optional map of spoken phrases to Music Assistant player entity_ids,
+        used to resolve the named Join command reliably. Each key is a spoken
+        phrase and each value an MA player entity_id. Keys match
+        case-insensitively; anything not in the map falls back to friendly-name
+        matching. Leave empty to rely on friendly names only.
+      default: "{}"
+      selector:
+        object:
+    # <<<<< NEW CODE END (Tier 3 inputs) <<<<<
+alias: View Assist - Play Music with Music Assistant Expanded
+description: Play music using music assistant
+trigger:
+  - trigger: conversation
+    command: !input play_artist_command
+    id: playartist
+  - trigger: conversation
+    command: !input play_playlist_command
+    id: playlist
+  - trigger: conversation
+    command: !input play_song_command
+    id: playsong
+  - trigger: conversation
+    command: !input queue_song_command
+    id: cuesong
+  # >>>>> NEW CODE BEGIN (Tier 2 play_media triggers) >>>>>
+  - trigger: conversation
+    command: !input play_album_command
+    id: playalbum
+  - trigger: conversation
+    command: !input play_radio_command
+    id: playradio
+  - trigger: conversation
+    command: !input radio_mode_command
+    id: radiomode
+  - trigger: conversation
+    command: !input add_song_command
+    id: addsong
+  # <<<<< NEW CODE END (Tier 2 play_media triggers) <<<<<
+  # >>>>> NEW CODE BEGIN (Tier 2 transfer_queue triggers) >>>>>
+  - trigger: conversation
+    command: !input transfer_target_command
+    id: transfertarget
+  - trigger: conversation
+    command: !input transfer_here_command
+    id: transferhere
+  # <<<<< NEW CODE END (Tier 2 transfer_queue triggers) <<<<<
+  # >>>>> NEW CODE BEGIN (Tier 2 favorite + now playing triggers) >>>>>
+  - trigger: conversation
+    command: !input favorite_song_command
+    id: favoritesong
+  - trigger: conversation
+    command: !input now_playing_command
+    id: nowplaying
+  # <<<<< NEW CODE END (Tier 2 favorite + now playing triggers) <<<<<
+  # >>>>> NEW CODE BEGIN (Tier 2 announcement triggers) >>>>>
+  - trigger: conversation
+    command: !input announcement_command
+    id: announce
+  - trigger: conversation
+    command: !input announcement_url_command
+    id: announceurl
+  # <<<<< NEW CODE END (Tier 2 announcement triggers) <<<<<
+  # >>>>> NEW CODE BEGIN (Tier 2 get_library + queue lookahead triggers) >>>>>
+  - trigger: conversation
+    command: !input play_random_command
+    id: playrandom
+  - trigger: conversation
+    command: !input whats_next_command
+    id: whatsnext
+  # <<<<< NEW CODE END (Tier 2 get_library + queue lookahead triggers) <<<<<
+  # >>>>> NEW CODE BEGIN (Tier 3 triggers) >>>>>
+  - trigger: conversation
+    command: !input shuffle_on_command
+    id: shuffleon
+  - trigger: conversation
+    command: !input shuffle_off_command
+    id: shuffleoff
+  - trigger: conversation
+    command: !input repeat_off_command
+    id: repeatoff
+  - trigger: conversation
+    command: !input repeat_one_command
+    id: repeatone
+  - trigger: conversation
+    command: !input repeat_all_command
+    id: repeatall
+  - trigger: conversation
+    command: !input clear_queue_command
+    id: clearqueue
+  - trigger: conversation
+    command: !input stop_command
+    id: stopplayback
+  - trigger: conversation
+    command: !input select_source_command
+    id: selectsource
+  - trigger: conversation
+    command: !input join_target_command
+    id: jointarget
+  - trigger: conversation
+    command: !input join_here_command
+    id: joinhere
+  - trigger: conversation
+    command: !input unjoin_command
+    id: unjoin
+  # <<<<< NEW CODE END (Tier 3 triggers) <<<<<
+conditions: []
+actions:
+  - variables:
+      target_satellite_device: "{{ view_assist_entity(trigger.device_id) }}"
+      target_mediaplayer_device: "{{ state_attr(target_satellite_device, 'mediaplayer_device')}}"
+      target_satellite_device_type: "{{ state_attr(target_satellite_device, 'type')}}"
+      target_musicplayer_device: "{{ state_attr(target_satellite_device, 'musicplayer_device') }}"
+      target_use_announce: "{{ state_attr(target_satellite_device, 'use_announce') }}"
+      view_path: !input view_path
+      ma_instance: !input ma_instance
+      language: !input language
+      # >>>>> NEW CODE BEGIN (Tier 3 variable wiring) >>>>>
+      join_alias_map: !input join_alias_map
+      # >>>>> NEW CODE BEGIN (Tier 2 announcement variable wiring) >>>>>
+      announcement_url_map: !input announcement_url_map
+      # >>>>> NEW CODE BEGIN (Tier 2 random_count wiring) >>>>>
+      random_count: !input random_count
+      # <<<<< NEW CODE END (Tier 2 random_count wiring) <<<<<
+      # <<<<< NEW CODE END (Tier 2 announcement variable wiring) <<<<<
+      # <<<<< NEW CODE END (Tier 3 variable wiring) <<<<<
+      translations:
+        ca:
+          responses:
+            playartist_found: "Reproduint música de {artist}"
+            playartist_not_found: "No he pogut trobar música per a {search_artist}"
+            playlist_found: "Reproduint la llista de reproducció {playlist}"
+            playlist_not_found: "Ho sento, no s'ha pogut trobar cap llista anomenada {search_playlist}"
+            playsong_found: "Reproduint {song} de {artist}"
+            playsong_not_found: "Ho sento, no s'ha trobat {song} de {artist}"
+            playsong_queue: "Afegint a la cua {song} de {artist}"
+            # >>>>> NEW CODE BEGIN (Tier 2 ca) >>>>>
+            playalbum_found: "Reproduint l'àlbum {album}"
+            playalbum_not_found: "No he pogut trobar l'àlbum {search_album}"
+            playradio_found: "Reproduint {radio}"
+            playradio_not_found: "No he pogut trobar cap emissora anomenada {search_radio}"
+            radiomode_found: "Iniciant una ràdio basada en {artist}"
+            addsong_queue: "Afegint {song} de {artist} al final de la cua"
+            # <<<<< NEW CODE END (Tier 2 ca) <<<<<
+            # >>>>> NEW CODE BEGIN (Tier 2 transfer ca) >>>>>
+            transfer_found: "Movent la música a {target}"
+            transfer_here: "Movent la música aquí"
+            transfer_nothing_playing: "Ara mateix no sona res per moure"
+            # <<<<< NEW CODE END (Tier 2 transfer ca) <<<<<
+            # >>>>> NEW CODE BEGIN (Tier 2 favnp ca) >>>>>
+            favorite_done: "Afegit als teus preferits"
+            favorite_failed: "No he pogut afegir la cançó actual als preferits"
+            nowplaying: "Ara sona {song} de {artist}"
+            nowplaying_song_only: "Ara sona {song}"
+            nowplaying_nothing: "Ara mateix no sona res"
+            nowplaying_full: "Ara sona {song} de {artist} de l'àlbum {album}"
+            # <<<<< NEW CODE END (Tier 2 favnp ca) <<<<<
+            # >>>>> NEW CODE BEGIN (Tier 2 announce ca) >>>>>
+            announce_url_not_found: "No tinc cap anunci anomenat {name}"
+            # <<<<< NEW CODE END (Tier 2 announce ca) <<<<<
+            # >>>>> NEW CODE BEGIN (Tier 2 randomqueue ca) >>>>>
+            random_done: "Reproduint una selecció aleatòria"
+            random_empty: "No he pogut trobar cap cançó per reproduir"
+            upcoming: "A continuació: {tracks}"
+            queue_empty: "No hi ha res més a la cua"
+            # <<<<< NEW CODE END (Tier 2 randomqueue ca) <<<<<
+            # >>>>> NEW CODE BEGIN (ca) >>>>>
+            shuffle_on: "Reproducció aleatòria activada"
+            shuffle_off: "Reproducció aleatòria desactivada"
+            repeat_off: "Repetició desactivada"
+            repeat_one: "Repetint aquesta cançó"
+            repeat_all: "Repetint la cua"
+            clear_queue: "Cua esborrada"
+            stop_playback: "Aturat"
+            select_source: "Font canviada a {source}"
+            join_found: "Afegint {target} a la música"
+            join_here: "Reproduint també aquí"
+            join_not_found: "No he pogut trobar cap reproductor anomenat {target}"
+            join_nothing_playing: "Ara mateix no sona res per agrupar"
+            unjoin_done: "Tret del grup"
+            # <<<<< NEW CODE END (ca) <<<<<
+        en:
+          responses:
+            playartist_found: Playing {artist} music
+            playartist_not_found: I was unable to find any music for {search_artist}
+            playlist_found: Playing the {playlist} playlist
+            playlist_not_found: Sorry, no playlist named {search_playlist} could be found
+            playsong_found: Playing {song} by {artist}
+            playsong_not_found: Sorry {song} by {artist} was not found
+            playsong_queue: Queuing {song} by {artist}
+            # >>>>> NEW CODE BEGIN (Tier 2 en) >>>>>
+            playalbum_found: Playing the album {album}
+            playalbum_not_found: Sorry, I couldn't find the album {search_album}
+            playradio_found: Playing {radio}
+            playradio_not_found: Sorry, I couldn't find a radio station called {search_radio}
+            radiomode_found: Starting a radio based on {artist}
+            addsong_queue: Adding {song} by {artist} to the end of the queue
+            # <<<<< NEW CODE END (Tier 2 en) <<<<<
+            # >>>>> NEW CODE BEGIN (Tier 2 transfer en) >>>>>
+            transfer_found: "Moving the music to {target}"
+            transfer_here: "Moving the music here"
+            transfer_nothing_playing: "Nothing is currently playing to move"
+            # <<<<< NEW CODE END (Tier 2 transfer en) <<<<<
+            # >>>>> NEW CODE BEGIN (Tier 2 favnp en) >>>>>
+            favorite_done: "Added to your favorites"
+            favorite_failed: "I couldn't favorite the current song"
+            nowplaying: "Now playing {song} by {artist}"
+            nowplaying_song_only: "Now playing {song}"
+            nowplaying_nothing: "Nothing is playing right now"
+            nowplaying_full: "Now playing {song} by {artist} from the album {album}"
+            # <<<<< NEW CODE END (Tier 2 favnp en) <<<<<
+            # >>>>> NEW CODE BEGIN (Tier 2 announce en) >>>>>
+            announce_url_not_found: "I don't have an announcement called {name}"
+            # <<<<< NEW CODE END (Tier 2 announce en) <<<<<
+            # >>>>> NEW CODE BEGIN (Tier 2 randomqueue en) >>>>>
+            random_done: "Playing a random mix"
+            random_empty: "I couldn't find any tracks to play"
+            upcoming: "Coming up: {tracks}"
+            queue_empty: "Nothing is queued after this"
+            # <<<<< NEW CODE END (Tier 2 randomqueue en) <<<<<
+            # >>>>> NEW CODE BEGIN (en) >>>>>
+            shuffle_on: Shuffle on
+            shuffle_off: Shuffle off
+            repeat_off: Repeat off
+            repeat_one: Repeating this track
+            repeat_all: Repeating the queue
+            clear_queue: Queue cleared
+            stop_playback: Stopped
+            select_source: Source set to {source}
+            join_found: Adding {target} to the music
+            join_here: Playing here too
+            join_not_found: I couldn't find a player named {target}
+            join_nothing_playing: Nothing is currently playing to join
+            unjoin_done: Removed from the group
+            # <<<<< NEW CODE END (en) <<<<<
+        de:
+          responses:
+            playartist_found: Spiele Musik von {artist}
+            playartist_not_found: Entschuldigung, ich konnte keine Musik von {search_artist} finden
+            playlist_found: Spiele die Playlist {playlist}
+            playlist_not_found: Entschuldigung, ich konnte keine Playlist mit dem Namen {search_playlist} finden
+            playsong_found: Spiele {song} von {artist}
+            playsong_not_found: Entschuldigung, ich konnte den Song {song} von {artist} nicht finden
+            playsong_queue: Füge {song} von {artist} zur Warteschlange hinzu
+            # >>>>> NEW CODE BEGIN (Tier 2 de) >>>>>
+            playalbum_found: Spiele das Album {album}
+            playalbum_not_found: Entschuldigung, ich konnte das Album {search_album} nicht finden
+            playradio_found: Spiele {radio}
+            playradio_not_found: Entschuldigung, ich konnte keinen Radiosender namens {search_radio} finden
+            radiomode_found: Starte ein Radio basierend auf {artist}
+            addsong_queue: Füge {song} von {artist} ans Ende der Warteschlange hinzu
+            # <<<<< NEW CODE END (Tier 2 de) <<<<<
+            # >>>>> NEW CODE BEGIN (Tier 2 transfer de) >>>>>
+            transfer_found: "Verschiebe die Musik zu {target}"
+            transfer_here: "Verschiebe die Musik hierher"
+            transfer_nothing_playing: "Es wird gerade nichts abgespielt zum Verschieben"
+            # <<<<< NEW CODE END (Tier 2 transfer de) <<<<<
+            # >>>>> NEW CODE BEGIN (Tier 2 favnp de) >>>>>
+            favorite_done: "Zu deinen Favoriten hinzugefügt"
+            favorite_failed: "Ich konnte den aktuellen Titel nicht zu den Favoriten hinzufügen"
+            nowplaying: "Jetzt läuft {song} von {artist}"
+            nowplaying_song_only: "Jetzt läuft {song}"
+            nowplaying_nothing: "Es wird gerade nichts abgespielt"
+            nowplaying_full: "Jetzt läuft {song} von {artist} aus dem Album {album}"
+            # <<<<< NEW CODE END (Tier 2 favnp de) <<<<<
+            # >>>>> NEW CODE BEGIN (Tier 2 announce de) >>>>>
+            announce_url_not_found: "Ich habe keine Ansage namens {name}"
+            # <<<<< NEW CODE END (Tier 2 announce de) <<<<<
+            # >>>>> NEW CODE BEGIN (Tier 2 randomqueue de) >>>>>
+            random_done: "Spiele einen zufälligen Mix"
+            random_empty: "Ich konnte keine Titel zum Abspielen finden"
+            upcoming: "Als Nächstes: {tracks}"
+            queue_empty: "Es ist nichts weiter in der Warteschlange"
+            # <<<<< NEW CODE END (Tier 2 randomqueue de) <<<<<
+            # >>>>> NEW CODE BEGIN (de) >>>>>
+            shuffle_on: Zufallswiedergabe ein
+            shuffle_off: Zufallswiedergabe aus
+            repeat_off: Wiederholung aus
+            repeat_one: Wiederhole diesen Titel
+            repeat_all: Wiederhole die Warteschlange
+            clear_queue: Warteschlange geleert
+            stop_playback: Gestoppt
+            select_source: Quelle auf {source} geändert
+            join_found: Füge {target} zur Musik hinzu
+            join_here: Spiele auch hier
+            join_not_found: Ich konnte keinen Player namens {target} finden
+            join_nothing_playing: Es wird gerade nichts abgespielt zum Gruppieren
+            unjoin_done: Aus der Gruppe entfernt
+            # <<<<< NEW CODE END (de) <<<<<
+        es:
+          responses:
+            playartist_found: "Reproduciendo música de {artist}"
+            playartist_not_found: "No he podido encontrar música para {search_artist}"
+            playlist_found: "Reproduciendo la lista de reproducción {playlist}"
+            playlist_not_found: "Lo siento, no se ha podido encontrar ninguna lista llamada {search_playlist}"
+            playsong_found: "Reproduciendo {song} de {artist}"
+            playsong_not_found: "Lo siento, no se ha encontrado {song} de {artist}"
+            playsong_queue: "Añadiendo a la cola {song} de {artist}"
+            # >>>>> NEW CODE BEGIN (Tier 2 es) >>>>>
+            playalbum_found: "Reproduciendo el álbum {album}"
+            playalbum_not_found: "Lo siento, no he podido encontrar el álbum {search_album}"
+            playradio_found: "Reproduciendo {radio}"
+            playradio_not_found: "Lo siento, no he podido encontrar una emisora llamada {search_radio}"
+            radiomode_found: "Iniciando una radio basada en {artist}"
+            addsong_queue: "Añadiendo {song} de {artist} al final de la cola"
+            # <<<<< NEW CODE END (Tier 2 es) <<<<<
+            # >>>>> NEW CODE BEGIN (Tier 2 transfer es) >>>>>
+            transfer_found: "Moviendo la música a {target}"
+            transfer_here: "Moviendo la música aquí"
+            transfer_nothing_playing: "Ahora mismo no se reproduce nada para mover"
+            # <<<<< NEW CODE END (Tier 2 transfer es) <<<<<
+            # >>>>> NEW CODE BEGIN (Tier 2 favnp es) >>>>>
+            favorite_done: "Añadido a tus favoritos"
+            favorite_failed: "No he podido añadir la canción actual a favoritos"
+            nowplaying: "Ahora suena {song} de {artist}"
+            nowplaying_song_only: "Ahora suena {song}"
+            nowplaying_nothing: "Ahora mismo no se reproduce nada"
+            nowplaying_full: "Ahora suena {song} de {artist} del álbum {album}"
+            # <<<<< NEW CODE END (Tier 2 favnp es) <<<<<
+            # >>>>> NEW CODE BEGIN (Tier 2 announce es) >>>>>
+            announce_url_not_found: "No tengo ningún anuncio llamado {name}"
+            # <<<<< NEW CODE END (Tier 2 announce es) <<<<<
+            # >>>>> NEW CODE BEGIN (Tier 2 randomqueue es) >>>>>
+            random_done: "Reproduciendo una mezcla aleatoria"
+            random_empty: "No he podido encontrar ninguna canción para reproducir"
+            upcoming: "A continuación: {tracks}"
+            queue_empty: "No hay nada más en la cola"
+            # <<<<< NEW CODE END (Tier 2 randomqueue es) <<<<<
+            # >>>>> NEW CODE BEGIN (es) >>>>>
+            shuffle_on: "Reproducción aleatoria activada"
+            shuffle_off: "Reproducción aleatoria desactivada"
+            repeat_off: "Repetición desactivada"
+            repeat_one: "Repitiendo esta canción"
+            repeat_all: "Repitiendo la cola"
+            clear_queue: "Cola borrada"
+            stop_playback: "Detenido"
+            select_source: "Fuente cambiada a {source}"
+            join_found: "Añadiendo {target} a la música"
+            join_here: "Reproduciendo aquí también"
+            join_not_found: "No he podido encontrar un reproductor llamado {target}"
+            join_nothing_playing: "Ahora mismo no se reproduce nada para agrupar"
+            unjoin_done: "Eliminado del grupo"
+            # <<<<< NEW CODE END (es) <<<<<
+        nl:
+          responses:
+            playartist_found: Muziek van {artist} afspelen
+            playartist_not_found: Ik kon geen muziek vinden van {search_artist}
+            playlist_found: De afspeellijst {playlist} afspelen
+            playlist_not_found: Sorry, er kon geen afspeellijst met de naam {search_playlist} worden gevonden
+            playsong_found: "{song} van {artist} afspelen"
+            playsong_not_found: Sorry, {song} van {artist} is niet gevonden
+            playsong_queue: "{song} van {artist} toevoegen aan de wachtrij"
+            # >>>>> NEW CODE BEGIN (Tier 2 nl) >>>>>
+            playalbum_found: Het album {album} afspelen
+            playalbum_not_found: Sorry, ik kon het album {search_album} niet vinden
+            playradio_found: "{radio} afspelen"
+            playradio_not_found: Sorry, ik kon geen radiozender genaamd {search_radio} vinden
+            radiomode_found: Een radio starten op basis van {artist}
+            addsong_queue: "{song} van {artist} achteraan de wachtrij toevoegen"
+            # <<<<< NEW CODE END (Tier 2 nl) <<<<<
+            # >>>>> NEW CODE BEGIN (Tier 2 transfer nl) >>>>>
+            transfer_found: "De muziek naar {target} verplaatsen"
+            transfer_here: "De muziek hierheen verplaatsen"
+            transfer_nothing_playing: "Er wordt nu niets afgespeeld om te verplaatsen"
+            # <<<<< NEW CODE END (Tier 2 transfer nl) <<<<<
+            # >>>>> NEW CODE BEGIN (Tier 2 favnp nl) >>>>>
+            favorite_done: "Toegevoegd aan je favorieten"
+            favorite_failed: "Ik kon het huidige nummer niet aan favorieten toevoegen"
+            nowplaying: "Nu speelt {song} van {artist}"
+            nowplaying_song_only: "Nu speelt {song}"
+            nowplaying_nothing: "Er speelt nu niets"
+            nowplaying_full: "Nu speelt {song} van {artist} uit het album {album}"
+            # <<<<< NEW CODE END (Tier 2 favnp nl) <<<<<
+            # >>>>> NEW CODE BEGIN (Tier 2 announce nl) >>>>>
+            announce_url_not_found: "Ik heb geen aankondiging met de naam {name}"
+            # <<<<< NEW CODE END (Tier 2 announce nl) <<<<<
+            # >>>>> NEW CODE BEGIN (Tier 2 randomqueue nl) >>>>>
+            random_done: "Een willekeurige mix afspelen"
+            random_empty: "Ik kon geen nummers vinden om af te spelen"
+            upcoming: "Hierna: {tracks}"
+            queue_empty: "Er staat niets meer in de wachtrij"
+            # <<<<< NEW CODE END (Tier 2 randomqueue nl) <<<<<
+            # >>>>> NEW CODE BEGIN (nl) >>>>>
+            shuffle_on: Shuffle aan
+            shuffle_off: Shuffle uit
+            repeat_off: Herhalen uit
+            repeat_one: Dit nummer herhalen
+            repeat_all: De wachtrij herhalen
+            clear_queue: Wachtrij gewist
+            stop_playback: Gestopt
+            select_source: "Bron ingesteld op {source}"
+            join_found: "{target} aan de muziek toevoegen"
+            join_here: Hier ook afspelen
+            join_not_found: "Ik kon geen speler genaamd {target} vinden"
+            join_nothing_playing: Er wordt nu niets afgespeeld om te groeperen
+            unjoin_done: Uit de groep verwijderd
+            # <<<<< NEW CODE END (nl) <<<<<
+        pl:
+          responses:
+            playartist_found: Odtwarzam muzykę {artist}
+            playartist_not_found: Nie udało się znaleźć muzyki dla {search_artist}
+            playlist_found: Odtwarzam playlistę {playlist}
+            playlist_not_found: Przepraszam, nie znaleziono playlisty o nazwie {search_playlist}
+            playsong_found: Odtwarzam {song} od {artist}
+            playsong_not_found: Przepraszam, nie znaleziono {song} od {artist}
+            playsong_queue: Dodaję do kolejki {song} od {artist}
+            # >>>>> NEW CODE BEGIN (Tier 2 pl) >>>>>
+            playalbum_found: Odtwarzam album {album}
+            playalbum_not_found: Przepraszam, nie znaleziono albumu {search_album}
+            playradio_found: Odtwarzam {radio}
+            playradio_not_found: Przepraszam, nie znaleziono stacji radiowej o nazwie {search_radio}
+            radiomode_found: Uruchamiam radio na podstawie {artist}
+            addsong_queue: Dodaję {song} od {artist} na koniec kolejki
+            # <<<<< NEW CODE END (Tier 2 pl) <<<<<
+            # >>>>> NEW CODE BEGIN (Tier 2 transfer pl) >>>>>
+            transfer_found: "Przenoszę muzykę do {target}"
+            transfer_here: "Przenoszę muzykę tutaj"
+            transfer_nothing_playing: "Nic teraz nie gra, aby przenieść"
+            # <<<<< NEW CODE END (Tier 2 transfer pl) <<<<<
+            # >>>>> NEW CODE BEGIN (Tier 2 favnp pl) >>>>>
+            favorite_done: "Dodano do ulubionych"
+            favorite_failed: "Nie udało się dodać bieżącego utworu do ulubionych"
+            nowplaying: "Teraz gra {song} od {artist}"
+            nowplaying_song_only: "Teraz gra {song}"
+            nowplaying_nothing: "Nic teraz nie gra"
+            nowplaying_full: "Teraz gra {song} od {artist} z albumu {album}"
+            # <<<<< NEW CODE END (Tier 2 favnp pl) <<<<<
+            # >>>>> NEW CODE BEGIN (Tier 2 announce pl) >>>>>
+            announce_url_not_found: "Nie mam zapowiedzi o nazwie {name}"
+            # <<<<< NEW CODE END (Tier 2 announce pl) <<<<<
+            # >>>>> NEW CODE BEGIN (Tier 2 randomqueue pl) >>>>>
+            random_done: "Odtwarzam losową playlistę"
+            random_empty: "Nie znalazłem żadnych utworów do odtworzenia"
+            upcoming: "W kolejce: {tracks}"
+            queue_empty: "Nic więcej nie ma w kolejce"
+            # <<<<< NEW CODE END (Tier 2 randomqueue pl) <<<<<
+            # >>>>> NEW CODE BEGIN (pl) >>>>>
+            shuffle_on: Odtwarzanie losowe włączone
+            shuffle_off: Odtwarzanie losowe wyłączone
+            repeat_off: Powtarzanie wyłączone
+            repeat_one: Powtarzam ten utwór
+            repeat_all: Powtarzam kolejkę
+            clear_queue: Kolejka wyczyszczona
+            stop_playback: Zatrzymano
+            select_source: "Źródło zmienione na {source}"
+            join_found: "Dodaję {target} do muzyki"
+            join_here: Odtwarzam także tutaj
+            join_not_found: "Nie znaleziono odtwarzacza o nazwie {target}"
+            join_nothing_playing: Nic teraz nie gra, aby pogrupować
+            unjoin_done: Usunięto z grupy
+            # <<<<< NEW CODE END (pl) <<<<<
+        pt:
+          responses:
+            playartist_found: Tocando música de {artist}
+            playartist_not_found: Não foi possível encontrar nenhuma música de {search_artist}
+            playlist_found: Tocando a Playlist {playlist}
+            playlist_not_found: Desculpe, nenhuma Playlist com o nome {search_playlist} pode ser encontrada
+            playsong_found: Tocando {song} por {artist}
+            playsong_not_found: Desculpe, a música {song} por {artist} não foi encontrada
+            playsong_queue: Incluindo a música {song} por {artist} na lista
+            # >>>>> NEW CODE BEGIN (Tier 2 pt) >>>>>
+            playalbum_found: Tocando o álbum {album}
+            playalbum_not_found: Desculpe, não consegui encontrar o álbum {search_album}
+            playradio_found: Tocando {radio}
+            playradio_not_found: Desculpe, não consegui encontrar uma estação de rádio chamada {search_radio}
+            radiomode_found: Iniciando uma rádio baseada em {artist}
+            addsong_queue: Adicionando {song} por {artist} ao fim da fila
+            # <<<<< NEW CODE END (Tier 2 pt) <<<<<
+            # >>>>> NEW CODE BEGIN (Tier 2 transfer pt) >>>>>
+            transfer_found: "Movendo a música para {target}"
+            transfer_here: "Movendo a música para aqui"
+            transfer_nothing_playing: "Nada está tocando no momento para mover"
+            # <<<<< NEW CODE END (Tier 2 transfer pt) <<<<<
+            # >>>>> NEW CODE BEGIN (Tier 2 favnp pt) >>>>>
+            favorite_done: "Adicionado aos seus favoritos"
+            favorite_failed: "Não consegui adicionar a música atual aos favoritos"
+            nowplaying: "Tocando agora {song} por {artist}"
+            nowplaying_song_only: "Tocando agora {song}"
+            nowplaying_nothing: "Nada está tocando no momento"
+            nowplaying_full: "Tocando agora {song} por {artist} do álbum {album}"
+            # <<<<< NEW CODE END (Tier 2 favnp pt) <<<<<
+            # >>>>> NEW CODE BEGIN (Tier 2 announce pt) >>>>>
+            announce_url_not_found: "Não tenho nenhum anúncio chamado {name}"
+            # <<<<< NEW CODE END (Tier 2 announce pt) <<<<<
+            # >>>>> NEW CODE BEGIN (Tier 2 randomqueue pt) >>>>>
+            random_done: "Tocando uma mistura aleatória"
+            random_empty: "Não consegui encontrar faixas para tocar"
+            upcoming: "A seguir: {tracks}"
+            queue_empty: "Não há mais nada na fila"
+            # <<<<< NEW CODE END (Tier 2 randomqueue pt) <<<<<
+            # >>>>> NEW CODE BEGIN (pt) >>>>>
+            shuffle_on: Reprodução aleatória ativada
+            shuffle_off: Reprodução aleatória desativada
+            repeat_off: Repetição desativada
+            repeat_one: Repetindo esta faixa
+            repeat_all: Repetindo a fila
+            clear_queue: Fila limpa
+            stop_playback: Parado
+            select_source: "Fonte alterada para {source}"
+            join_found: "Adicionando {target} à música"
+            join_here: Tocando aqui também
+            join_not_found: "Não consegui encontrar um player chamado {target}"
+            join_nothing_playing: Nada está tocando no momento para agrupar
+            unjoin_done: Removido do grupo
+            # <<<<< NEW CODE END (pt) <<<<<
+        ro:
+          responses:
+            playartist_found: Redau muzică de {artist}
+            playartist_not_found: Nu am găsit muzică de {search_artist}
+            playlist_found: Redau lista de redare {playlist}
+            playlist_not_found: Îmi pare rău, nu a fost găsită nicio listă de redare numită {search_playlist}
+            playsong_found: Redau {song} de {artist}
+            playsong_not_found: Îmi pare rău, {song} de {artist} nu a fost găsit
+            playsong_queue: Adaug în coadă {song} de {artist}
+            # >>>>> NEW CODE BEGIN (Tier 2 ro) >>>>>
+            playalbum_found: Redau albumul {album}
+            playalbum_not_found: Îmi pare rău, nu am găsit albumul {search_album}
+            playradio_found: Redau {radio}
+            playradio_not_found: Îmi pare rău, nu am găsit un post de radio numit {search_radio}
+            radiomode_found: Pornesc un radio bazat pe {artist}
+            addsong_queue: Adaug {song} de {artist} la sfârșitul cozii
+            # <<<<< NEW CODE END (Tier 2 ro) <<<<<
+            # >>>>> NEW CODE BEGIN (Tier 2 transfer ro) >>>>>
+            transfer_found: "Mut muzica la {target}"
+            transfer_here: "Mut muzica aici"
+            transfer_nothing_playing: "Nu se redă nimic momentan pentru a muta"
+            # <<<<< NEW CODE END (Tier 2 transfer ro) <<<<<
+            # >>>>> NEW CODE BEGIN (Tier 2 favnp ro) >>>>>
+            favorite_done: "Adăugat la favorite"
+            favorite_failed: "Nu am putut adăuga piesa curentă la favorite"
+            nowplaying: "Acum se redă {song} de {artist}"
+            nowplaying_song_only: "Acum se redă {song}"
+            nowplaying_nothing: "Nu se redă nimic momentan"
+            nowplaying_full: "Acum se redă {song} de {artist} de pe albumul {album}"
+            # <<<<< NEW CODE END (Tier 2 favnp ro) <<<<<
+            # >>>>> NEW CODE BEGIN (Tier 2 announce ro) >>>>>
+            announce_url_not_found: "Nu am niciun anunț numit {name}"
+            # <<<<< NEW CODE END (Tier 2 announce ro) <<<<<
+            # >>>>> NEW CODE BEGIN (Tier 2 randomqueue ro) >>>>>
+            random_done: "Redau un mix aleatoriu"
+            random_empty: "Nu am găsit nicio piesă de redat"
+            upcoming: "Urmează: {tracks}"
+            queue_empty: "Nu mai este nimic în coadă"
+            # <<<<< NEW CODE END (Tier 2 randomqueue ro) <<<<<
+            # >>>>> NEW CODE BEGIN (ro) >>>>>
+            shuffle_on: Redare aleatorie activată
+            shuffle_off: Redare aleatorie dezactivată
+            repeat_off: Repetare dezactivată
+            repeat_one: Repet această piesă
+            repeat_all: Repet coada
+            clear_queue: Coadă golită
+            stop_playback: Oprit
+            select_source: "Sursă schimbată la {source}"
+            join_found: "Adaug {target} la muzică"
+            join_here: Redau și aici
+            join_not_found: "Nu am găsit un player numit {target}"
+            join_nothing_playing: Nu se redă nimic momentan pentru a grupa
+            unjoin_done: Eliminat din grup
+            # <<<<< NEW CODE END (ro) <<<<<
+  - choose:
+      - conditions:
+          - condition: trigger
+            id:
+              - playartist
+        sequence:
+          - action: music_assistant.search
+            data:
+              limit: 1
+              config_entry_id: "{{ ma_instance }}"
+              media_type:
+                - artist
+              name: "{{ trigger.slots.artist }}"
+            response_variable: found_artist
+          - alias: Did we find an artist?
+            if:
+              - condition: template
+                value_template: "{{found_artist['artists'] | count>0}}"
+                alias: We found an artist!
+            then:
+              - action: view_assist.set_state
+                target:
+                  entity_id: "{{ target_satellite_device }}"
+                data:
+                  mode: music
+                  title: ""
+                  message_font_size: 5vw
+              - action: view_assist.navigate
+                data:
+                  device: "{{ target_satellite_device }}"
+                  path: "{{ view_path }}"
+              - action: music_assistant.play_media
+                target:
+                  entity_id: "{{ target_musicplayer_device }}"
+                data:
+                  media_type: artist
+                  enqueue: replace
+                  media_id: "{{ found_artist.artists.0.name }}"
+              - if:
+                  - condition: template
+                    value_template: "{{ target_use_announce is not false }}"
+                then:
+                  - variables:
+                      conversation_response: '{{ translations[language][''responses''][''playartist_found''].replace("{artist}", found_artist.artists.0.name)}}'
+                  - set_conversation_response: "{{ conversation_response }}"
+                  - action: view_assist.set_state
+                    target:
+                      entity_id: "{{ target_satellite_device }}"
+                    data:
+                      last_said: "{{ conversation_response }}"
+                else:
+                  - set_conversation_response: ""
+            else:
+              - if:
+                  - condition: template
+                    value_template: "{{ target_use_announce is not false }}"
+                then:
+                  - variables:
+                      conversation_response: '{{ translations[language][''responses''][''playartist_not_found''].replace("{search_artist}", trigger.slots.artist)}}'
+                  - set_conversation_response: "{{ conversation_response }}"
+                  - action: view_assist.set_state
+                    target:
+                      entity_id: "{{ target_satellite_device }}"
+                    data:
+                      last_said: "{{ conversation_response }}"
+                else:
+                  - set_conversation_response: ""
+      - conditions:
+          - condition: trigger
+            id:
+              - playlist
+        sequence:
+          - action: music_assistant.search
+            data:
+              limit: 1
+              config_entry_id: "{{ ma_instance }}"
+              media_type:
+                - playlist
+              name: "{{ trigger.slots.playlist }}"
+            response_variable: found_playlist
+          - alias: Did we find a playlist?
+            if:
+              - condition: template
+                value_template: "{{found_playlist['playlists'] | count>0}}"
+                alias: We found a playlist!
+            then:
+              - action: view_assist.set_state
+                target:
+                  entity_id: "{{ target_satellite_device }}"
+                data:
+                  mode: music
+                  title: ""
+                  message_font_size: 5vw
+              - action: view_assist.navigate
+                data:
+                  device: "{{ target_satellite_device }}"
+                  path: "{{ view_path }}"
+              - action: music_assistant.play_media
+                target:
+                  entity_id: "{{ target_musicplayer_device }}"
+                data:
+                  media_type: playlist
+                  enqueue: replace
+                  media_id: "{{ trigger.slots.playlist }}"
+              - if:
+                  - condition: template
+                    value_template: "{{ target_use_announce is not false }}"
+                then:
+                  - variables:
+                      conversation_response: '{{ translations[language][''responses''][''playlist_found''].replace("{playlist}", found_playlist.playlists.0.name )}}'
+                  - set_conversation_response: "{{ conversation_response }}"
+                  - action: view_assist.set_state
+                    target:
+                      entity_id: "{{ target_satellite_device }}"
+                    data:
+                      last_said: "{{ conversation_response }}"
+                else:
+                  - set_conversation_response: ""
+            else:
+              - if:
+                  - condition: template
+                    value_template: "{{ target_use_announce is not false }}"
+                then:
+                  - variables:
+                      conversation_response: '{{ translations[language][''responses''][''playlist_not_found''].replace("{search_playlist}", trigger.slots.playlist )}}'
+                  - set_conversation_response: "{{ conversation_response }}"
+                  - action: view_assist.set_state
+                    target:
+                      entity_id: "{{ target_satellite_device }}"
+                    data:
+                      last_said: "{{ conversation_response }}"
+                else:
+                  - set_conversation_response: ""
+      - conditions:
+          - condition: trigger
+            id:
+              - playsong
+              - cuesong
+        sequence:
+          - action: music_assistant.search
+            data:
+              limit: 1
+              config_entry_id: "{{ ma_instance }}"
+              media_type:
+                - track
+              name: "{{ trigger.slots.song }}"
+              artist: "{{ trigger.slots.artist | default('') }}"
+            response_variable: found_track
+          - alias: Did we find a track?
+            if:
+              - condition: template
+                value_template: "{{found_track['tracks'] | count>0}}"
+                alias: We found a track!
+            then:
+              - action: view_assist.set_state
+                target:
+                  entity_id: "{{ target_satellite_device }}"
+                data:
+                  mode: music
+                  title: ""
+                  message_font_size: 5vw
+              - action: view_assist.navigate
+                data:
+                  device: "{{ target_satellite_device }}"
+                  path: "{{ view_path }}"
+              - alias: Set enqueue_type, media_type and response_first_word depending on cuesong or playsong trigger
+                choose:
+                  - conditions:
+                      - condition: trigger
+                        id:
+                          - cuesong
+                    sequence:
+                      - action: music_assistant.play_media
+                        target:
+                          entity_id: "{{ target_musicplayer_device }}"
+                        data:
+                          media_type: track
+                          enqueue: next
+                          media_id: "{{ found_track.tracks.0.name }}"
+                          artist: "{{ trigger.slots.artist }}"
+                      - if:
+                          - condition: template
+                            value_template: "{{ target_use_announce is not false }}"
+                        then:
+                          - variables:
+                              conversation_response: >-
+                                {{ translations[language]['responses']['playsong_found'].replace("{artist}", found_track.tracks[0].artists[0].name).replace("{song}", found_track.tracks[0].name) }}
+                          - set_conversation_response: "{{ conversation_response }}"
+                          - action: view_assist.set_state
+                            target:
+                              entity_id: "{{ target_satellite_device }}"
+                            data:
+                              last_said: "{{ conversation_response }}"
+                        else:
+                          - set_conversation_response: ""
+                  - conditions:
+                      - condition: trigger
+                        id:
+                          - playsong
+                    sequence:
+                      - action: music_assistant.play_media
+                        target:
+                          entity_id: "{{ target_musicplayer_device }}"
+                        data:
+                          media_type: track
+                          enqueue: play
+                          media_id: "{{ found_track.tracks.0.name }}"
+                          artist: "{{ trigger.slots.artist }}"
+                      - if:
+                          - condition: template
+                            value_template: "{{ target_use_announce is not false }}"
+                        then:
+                          - variables:
+                              conversation_response: >-
+                                {{ translations[language]['responses']['playsong_found'].replace("{artist}", found_track.tracks[0].artists[0].name).replace("{song}", found_track.tracks[0].name) }}
+                          - set_conversation_response: "{{ conversation_response }}"
+                          - action: view_assist.set_state
+                            target:
+                              entity_id: "{{ target_satellite_device }}"
+                            data:
+                              last_said: "{{ conversation_response }}"
+                        else:
+                          - set_conversation_response: ""
+            else:
+              - if:
+                  - condition: template
+                    value_template: "{{ target_use_announce is not false }}"
+                then:
+                  - variables:
+                      conversation_response: '{{ translations[language][''responses''][''playsong_not_found''].replace("{artist}", trigger.slots.artist ).replace("{song}", trigger.slots.song ) }}'
+                  - set_conversation_response: "{{ conversation_response }}"
+                  - action: view_assist.set_state
+                    target:
+                      entity_id: "{{ target_satellite_device }}"
+                    data:
+                      last_said: "{{ conversation_response }}"
+                else:
+                  - set_conversation_response: ""
+      # >>>>> NEW CODE BEGIN (Tier 2 play_media branches) >>>>>
+      - conditions:
+          - condition: trigger
+            id:
+              - playalbum
+        sequence:
+          - action: music_assistant.search
+            data:
+              limit: 1
+              config_entry_id: "{{ ma_instance }}"
+              media_type:
+                - album
+              name: "{{ trigger.slots.album }}"
+              artist: "{{ trigger.slots.artist | default('') }}"
+            response_variable: found_album
+          - alias: Did we find an album?
+            if:
+              - condition: template
+                value_template: "{{found_album['albums'] | count>0}}"
+                alias: We found an album!
+            then:
+              - action: view_assist.set_state
+                target:
+                  entity_id: "{{ target_satellite_device }}"
+                data:
+                  mode: music
+                  title: ""
+                  message_font_size: 5vw
+              - action: view_assist.navigate
+                data:
+                  device: "{{ target_satellite_device }}"
+                  path: "{{ view_path }}"
+              - action: music_assistant.play_media
+                target:
+                  entity_id: "{{ target_musicplayer_device }}"
+                data:
+                  media_type: album
+                  enqueue: replace
+                  media_id: "{{ found_album.albums.0.name }}"
+                  artist: "{{ trigger.slots.artist | default('') }}"
+              - if:
+                  - condition: template
+                    value_template: "{{ target_use_announce is not false }}"
+                then:
+                  - variables:
+                      conversation_response: >-
+                        {{ translations[language]['responses']['playalbum_found'].replace("{album}", found_album.albums.0.name) }}
+                  - set_conversation_response: "{{ conversation_response }}"
+                  - action: view_assist.set_state
+                    target:
+                      entity_id: "{{ target_satellite_device }}"
+                    data:
+                      last_said: "{{ conversation_response }}"
+                else:
+                  - set_conversation_response: ""
+            else:
+              - if:
+                  - condition: template
+                    value_template: "{{ target_use_announce is not false }}"
+                then:
+                  - variables:
+                      conversation_response: >-
+                        {{ translations[language]['responses']['playalbum_not_found'].replace("{search_album}", trigger.slots.album) }}
+                  - set_conversation_response: "{{ conversation_response }}"
+                  - action: view_assist.set_state
+                    target:
+                      entity_id: "{{ target_satellite_device }}"
+                    data:
+                      last_said: "{{ conversation_response }}"
+                else:
+                  - set_conversation_response: ""
+      - conditions:
+          - condition: trigger
+            id:
+              - playradio
+        sequence:
+          - action: music_assistant.search
+            data:
+              limit: 1
+              config_entry_id: "{{ ma_instance }}"
+              media_type:
+                - radio
+              name: "{{ trigger.slots.radio }}"
+            response_variable: found_radio
+          - alias: Did we find a radio station?
+            if:
+              - condition: template
+                value_template: "{{found_radio['radio'] | count>0}}"
+                alias: We found a radio station!
+            then:
+              - action: view_assist.set_state
+                target:
+                  entity_id: "{{ target_satellite_device }}"
+                data:
+                  mode: music
+                  title: ""
+                  message_font_size: 5vw
+              - action: view_assist.navigate
+                data:
+                  device: "{{ target_satellite_device }}"
+                  path: "{{ view_path }}"
+              - action: music_assistant.play_media
+                target:
+                  entity_id: "{{ target_musicplayer_device }}"
+                data:
+                  media_type: radio
+                  enqueue: replace
+                  media_id: "{{ found_radio.radio.0.name }}"
+              - if:
+                  - condition: template
+                    value_template: "{{ target_use_announce is not false }}"
+                then:
+                  - variables:
+                      conversation_response: >-
+                        {{ translations[language]['responses']['playradio_found'].replace("{radio}", found_radio.radio.0.name) }}
+                  - set_conversation_response: "{{ conversation_response }}"
+                  - action: view_assist.set_state
+                    target:
+                      entity_id: "{{ target_satellite_device }}"
+                    data:
+                      last_said: "{{ conversation_response }}"
+                else:
+                  - set_conversation_response: ""
+            else:
+              - if:
+                  - condition: template
+                    value_template: "{{ target_use_announce is not false }}"
+                then:
+                  - variables:
+                      conversation_response: >-
+                        {{ translations[language]['responses']['playradio_not_found'].replace("{search_radio}", trigger.slots.radio) }}
+                  - set_conversation_response: "{{ conversation_response }}"
+                  - action: view_assist.set_state
+                    target:
+                      entity_id: "{{ target_satellite_device }}"
+                    data:
+                      last_said: "{{ conversation_response }}"
+                else:
+                  - set_conversation_response: ""
+      - conditions:
+          - condition: trigger
+            id:
+              - radiomode
+        sequence:
+          - action: music_assistant.search
+            data:
+              limit: 1
+              config_entry_id: "{{ ma_instance }}"
+              media_type:
+                - artist
+              name: "{{ trigger.slots.artist }}"
+            response_variable: found_artist
+          - alias: Did we find an artist to seed radio mode?
+            if:
+              - condition: template
+                value_template: "{{found_artist['artists'] | count>0}}"
+                alias: We found a seed artist!
+            then:
+              - action: view_assist.set_state
+                target:
+                  entity_id: "{{ target_satellite_device }}"
+                data:
+                  mode: music
+                  title: ""
+                  message_font_size: 5vw
+              - action: view_assist.navigate
+                data:
+                  device: "{{ target_satellite_device }}"
+                  path: "{{ view_path }}"
+              - action: music_assistant.play_media
+                target:
+                  entity_id: "{{ target_musicplayer_device }}"
+                data:
+                  media_type: artist
+                  enqueue: replace
+                  radio_mode: true
+                  media_id: "{{ found_artist.artists.0.name }}"
+              - if:
+                  - condition: template
+                    value_template: "{{ target_use_announce is not false }}"
+                then:
+                  - variables:
+                      conversation_response: >-
+                        {{ translations[language]['responses']['radiomode_found'].replace("{artist}", found_artist.artists.0.name) }}
+                  - set_conversation_response: "{{ conversation_response }}"
+                  - action: view_assist.set_state
+                    target:
+                      entity_id: "{{ target_satellite_device }}"
+                    data:
+                      last_said: "{{ conversation_response }}"
+                else:
+                  - set_conversation_response: ""
+            else:
+              - if:
+                  - condition: template
+                    value_template: "{{ target_use_announce is not false }}"
+                then:
+                  - variables:
+                      conversation_response: >-
+                        {{ translations[language]['responses']['playartist_not_found'].replace("{search_artist}", trigger.slots.artist) }}
+                  - set_conversation_response: "{{ conversation_response }}"
+                  - action: view_assist.set_state
+                    target:
+                      entity_id: "{{ target_satellite_device }}"
+                    data:
+                      last_said: "{{ conversation_response }}"
+                else:
+                  - set_conversation_response: ""
+      - conditions:
+          - condition: trigger
+            id:
+              - addsong
+        sequence:
+          - action: music_assistant.search
+            data:
+              limit: 1
+              config_entry_id: "{{ ma_instance }}"
+              media_type:
+                - track
+              name: "{{ trigger.slots.song }}"
+              artist: "{{ trigger.slots.artist | default('') }}"
+            response_variable: found_track
+          - alias: Did we find a track to add?
+            if:
+              - condition: template
+                value_template: "{{found_track['tracks'] | count>0}}"
+                alias: We found a track!
+            then:
+              - action: music_assistant.play_media
+                target:
+                  entity_id: "{{ target_musicplayer_device }}"
+                data:
+                  media_type: track
+                  enqueue: add
+                  media_id: "{{ found_track.tracks.0.name }}"
+                  artist: "{{ trigger.slots.artist }}"
+              - if:
+                  - condition: template
+                    value_template: "{{ target_use_announce is not false }}"
+                then:
+                  - variables:
+                      conversation_response: >-
+                        {{ translations[language]['responses']['addsong_queue'].replace("{artist}", found_track.tracks[0].artists[0].name).replace("{song}", found_track.tracks[0].name) }}
+                  - set_conversation_response: "{{ conversation_response }}"
+                  - action: view_assist.set_state
+                    target:
+                      entity_id: "{{ target_satellite_device }}"
+                    data:
+                      last_said: "{{ conversation_response }}"
+                else:
+                  - set_conversation_response: ""
+            else:
+              - if:
+                  - condition: template
+                    value_template: "{{ target_use_announce is not false }}"
+                then:
+                  - variables:
+                      conversation_response: >-
+                        {{ translations[language]['responses']['playsong_not_found'].replace("{artist}", trigger.slots.artist).replace("{song}", trigger.slots.song) }}
+                  - set_conversation_response: "{{ conversation_response }}"
+                  - action: view_assist.set_state
+                    target:
+                      entity_id: "{{ target_satellite_device }}"
+                    data:
+                      last_said: "{{ conversation_response }}"
+                else:
+                  - set_conversation_response: ""
+      # <<<<< NEW CODE END (Tier 2 play_media branches) <<<<<
+      # >>>>> NEW CODE BEGIN (Tier 2 transfer_queue branches) >>>>>
+      - conditions:
+          - condition: trigger
+            id:
+              - transfertarget
+        sequence:
+          - variables:
+              ma_leader: >-
+                {% set ns = namespace(leader='') %}
+                {% for e in integration_entities('music_assistant') if e.startswith('media_player.') %}
+                  {% if ns.leader == '' and states(e) == 'playing' %}{% set ns.leader = e %}{% endif %}
+                {% endfor %}
+                {{ ns.leader }}
+              ma_target: >-
+                {% set query = (trigger.slots.target | default('')) | lower | trim %}
+                {% set amap = join_alias_map | default({}, true) %}
+                {% set ns = namespace(match='') %}
+                {% for k, v in amap.items() %}
+                  {% if ns.match == '' and (k | string | lower | trim) == query %}{% set ns.match = v %}{% endif %}
+                {% endfor %}
+                {% if ns.match == '' %}
+                  {% for e in integration_entities('music_assistant') if e.startswith('media_player.') %}
+                    {% set fn = state_attr(e, 'friendly_name') | default('') | lower %}
+                    {% if ns.match == '' and query != '' and (query in fn or fn in query) %}{% set ns.match = e %}{% endif %}
+                  {% endfor %}
+                {% endif %}
+                {{ ns.match }}
+          - alias: Transfer only if music is playing and the named player resolved
+            choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ ma_leader == '' }}"
+                alias: Nothing is playing
+                sequence:
+                  - if:
+                      - condition: template
+                        value_template: "{{ target_use_announce is not false }}"
+                    then:
+                      - variables:
+                          conversation_response: "{{ translations[language]['responses']['transfer_nothing_playing'] }}"
+                      - set_conversation_response: "{{ conversation_response }}"
+                      - action: view_assist.set_state
+                        target:
+                          entity_id: "{{ target_satellite_device }}"
+                        data:
+                          last_said: "{{ conversation_response }}"
+                    else:
+                      - set_conversation_response: ""
+              - conditions:
+                  - condition: template
+                    value_template: "{{ ma_target == '' }}"
+                alias: Named player not found
+                sequence:
+                  - if:
+                      - condition: template
+                        value_template: "{{ target_use_announce is not false }}"
+                    then:
+                      - variables:
+                          conversation_response: >-
+                            {{ translations[language]['responses']['join_not_found'].replace("{target}", trigger.slots.target | default('')) }}
+                      - set_conversation_response: "{{ conversation_response }}"
+                      - action: view_assist.set_state
+                        target:
+                          entity_id: "{{ target_satellite_device }}"
+                        data:
+                          last_said: "{{ conversation_response }}"
+                    else:
+                      - set_conversation_response: ""
+            default:
+              - action: music_assistant.transfer_queue
+                target:
+                  entity_id: "{{ ma_target }}"
+                data:
+                  source_player: "{{ ma_leader }}"
+                  auto_play: true
+              - if:
+                  - condition: template
+                    value_template: "{{ target_use_announce is not false }}"
+                then:
+                  - variables:
+                      conversation_response: >-
+                        {{ translations[language]['responses']['transfer_found'].replace("{target}", state_attr(ma_target, 'friendly_name') | default(trigger.slots.target)) }}
+                  - set_conversation_response: "{{ conversation_response }}"
+                  - action: view_assist.set_state
+                    target:
+                      entity_id: "{{ target_satellite_device }}"
+                    data:
+                      last_said: "{{ conversation_response }}"
+                else:
+                  - set_conversation_response: ""
+      - conditions:
+          - condition: trigger
+            id:
+              - transferhere
+        sequence:
+          - variables:
+              ma_leader: >-
+                {% set ns = namespace(leader='') %}
+                {% for e in integration_entities('music_assistant') if e.startswith('media_player.') %}
+                  {% if ns.leader == '' and states(e) == 'playing' %}{% set ns.leader = e %}{% endif %}
+                {% endfor %}
+                {{ ns.leader }}
+          - alias: Move playback here if something is playing
+            if:
+              - condition: template
+                value_template: "{{ ma_leader == '' }}"
+            then:
+              - if:
+                  - condition: template
+                    value_template: "{{ target_use_announce is not false }}"
+                then:
+                  - variables:
+                      conversation_response: "{{ translations[language]['responses']['transfer_nothing_playing'] }}"
+                  - set_conversation_response: "{{ conversation_response }}"
+                  - action: view_assist.set_state
+                    target:
+                      entity_id: "{{ target_satellite_device }}"
+                    data:
+                      last_said: "{{ conversation_response }}"
+                else:
+                  - set_conversation_response: ""
+            else:
+              - action: music_assistant.transfer_queue
+                target:
+                  entity_id: "{{ target_musicplayer_device }}"
+                data:
+                  source_player: "{{ ma_leader }}"
+                  auto_play: true
+              - if:
+                  - condition: template
+                    value_template: "{{ target_use_announce is not false }}"
+                then:
+                  - variables:
+                      conversation_response: "{{ translations[language]['responses']['transfer_here'] }}"
+                  - set_conversation_response: "{{ conversation_response }}"
+                  - action: view_assist.set_state
+                    target:
+                      entity_id: "{{ target_satellite_device }}"
+                    data:
+                      last_said: "{{ conversation_response }}"
+                else:
+                  - set_conversation_response: ""
+      # <<<<< NEW CODE END (Tier 2 transfer_queue branches) <<<<<
+      # >>>>> NEW CODE BEGIN (Tier 2 favorite + now playing branches) >>>>>
+      - conditions:
+          - condition: trigger
+            id:
+              - favoritesong
+        sequence:
+          - variables:
+              ma_favorite_button: >-
+                {% set dev = device_id(target_musicplayer_device) %}
+                {% set ns = namespace(btn='') %}
+                {% if dev %}
+                  {% for e in device_entities(dev) if e.startswith('button.') and 'favorite' in e %}
+                    {% if ns.btn == '' %}{% set ns.btn = e %}{% endif %}
+                  {% endfor %}
+                {% endif %}
+                {{ ns.btn }}
+          - alias: Favorite the current song if a favorite button was found
+            if:
+              - condition: template
+                value_template: "{{ ma_favorite_button != '' }}"
+            then:
+              - action: button.press
+                target:
+                  entity_id: "{{ ma_favorite_button }}"
+              - if:
+                  - condition: template
+                    value_template: "{{ target_use_announce is not false }}"
+                then:
+                  - variables:
+                      conversation_response: "{{ translations[language]['responses']['favorite_done'] }}"
+                  - set_conversation_response: "{{ conversation_response }}"
+                  - action: view_assist.set_state
+                    target:
+                      entity_id: "{{ target_satellite_device }}"
+                    data:
+                      last_said: "{{ conversation_response }}"
+                else:
+                  - set_conversation_response: ""
+            else:
+              - if:
+                  - condition: template
+                    value_template: "{{ target_use_announce is not false }}"
+                then:
+                  - variables:
+                      conversation_response: "{{ translations[language]['responses']['favorite_failed'] }}"
+                  - set_conversation_response: "{{ conversation_response }}"
+                  - action: view_assist.set_state
+                    target:
+                      entity_id: "{{ target_satellite_device }}"
+                    data:
+                      last_said: "{{ conversation_response }}"
+                else:
+                  - set_conversation_response: ""
+      - conditions:
+          - condition: trigger
+            id:
+              - nowplaying
+        sequence:
+          - variables:
+              ma_nowplaying_player: >-
+                {% if states(target_musicplayer_device) == 'playing' %}{{ target_musicplayer_device }}{% else %}{% set ns = namespace(leader='') %}{% for e in integration_entities('music_assistant') if e.startswith('media_player.') %}{% if ns.leader == '' and states(e) == 'playing' %}{% set ns.leader = e %}{% endif %}{% endfor %}{{ ns.leader }}{% endif %}
+          - alias: Report the current track or that nothing is playing
+            if:
+              - condition: template
+                value_template: "{{ ma_nowplaying_player == '' }}"
+            then:
+              - variables:
+                  conversation_response: "{{ translations[language]['responses']['nowplaying_nothing'] }}"
+              - set_conversation_response: "{{ conversation_response }}"
+              - action: view_assist.set_state
+                target:
+                  entity_id: "{{ target_satellite_device }}"
+                data:
+                  last_said: "{{ conversation_response }}"
+            else:
+              - variables:
+                  conversation_response: >-
+                    {% set title = state_attr(ma_nowplaying_player, 'media_title') | default('') %}
+                    {% set artist = state_attr(ma_nowplaying_player, 'media_artist') | default('') %}
+                    {% set album = state_attr(ma_nowplaying_player, 'media_album_name') | default('') %}
+                    {% if artist and album %}{{ translations[language]['responses']['nowplaying_full'].replace("{song}", title).replace("{artist}", artist).replace("{album}", album) }}{% elif artist %}{{ translations[language]['responses']['nowplaying'].replace("{song}", title).replace("{artist}", artist) }}{% else %}{{ translations[language]['responses']['nowplaying_song_only'].replace("{song}", title) }}{% endif %}
+              - set_conversation_response: "{{ conversation_response | trim }}"
+              - action: view_assist.set_state
+                target:
+                  entity_id: "{{ target_satellite_device }}"
+                data:
+                  last_said: "{{ conversation_response | trim }}"
+      # <<<<< NEW CODE END (Tier 2 favorite + now playing branches) <<<<<
+      # >>>>> NEW CODE BEGIN (Tier 2 announcement branches) >>>>>
+      - conditions:
+          - condition: trigger
+            id:
+              - announce
+        sequence:
+          - alias: Speak the announcement back through the satellite's own pipeline TTS
+            set_conversation_response: "{{ trigger.slots.message }}"
+          - action: view_assist.set_state
+            target:
+              entity_id: "{{ target_satellite_device }}"
+            data:
+              last_said: "{{ trigger.slots.message }}"
+      - conditions:
+          - condition: trigger
+            id:
+              - announceurl
+        sequence:
+          - variables:
+              announce_url: >-
+                {% set query = (trigger.slots.name | default('')) | lower | trim %}
+                {% set amap = announcement_url_map | default({}, true) %}
+                {% set ns = namespace(url='') %}
+                {% for k, v in amap.items() %}
+                  {% if ns.url == '' and (k | string | lower | trim) == query %}{% set ns.url = v %}{% endif %}
+                {% endfor %}
+                {{ ns.url }}
+          - alias: Play the named announcement sound if found in the map
+            if:
+              - condition: template
+                value_template: "{{ announce_url != '' }}"
+            then:
+              - action: music_assistant.play_announcement
+                target:
+                  entity_id: "{{ target_musicplayer_device }}"
+                data:
+                  url: "{{ announce_url }}"
+              - set_conversation_response: ""
+              - action: view_assist.set_state
+                target:
+                  entity_id: "{{ target_satellite_device }}"
+                data:
+                  last_said: "{{ trigger.slots.name }}"
+            else:
+              - if:
+                  - condition: template
+                    value_template: "{{ target_use_announce is not false }}"
+                then:
+                  - variables:
+                      conversation_response: >-
+                        {{ translations[language]['responses']['announce_url_not_found'].replace("{name}", trigger.slots.name | default('')) }}
+                  - set_conversation_response: "{{ conversation_response }}"
+                  - action: view_assist.set_state
+                    target:
+                      entity_id: "{{ target_satellite_device }}"
+                    data:
+                      last_said: "{{ conversation_response }}"
+                else:
+                  - set_conversation_response: ""
+      # <<<<< NEW CODE END (Tier 2 announcement branches) <<<<<
+      # >>>>> NEW CODE BEGIN (Tier 2 get_library + queue lookahead branches) >>>>>
+      - conditions:
+          - condition: trigger
+            id:
+              - playrandom
+        sequence:
+          - action: music_assistant.get_library
+            data:
+              config_entry_id: "{{ ma_instance }}"
+              media_type: track
+              limit: "{{ random_count | int(25) }}"
+              order_by: random
+            response_variable: random_tracks
+          - alias: Play the random tracks if any were returned
+            if:
+              - condition: template
+                value_template: "{{ random_tracks['items'] | default([]) | count > 0 }}"
+            then:
+              - action: view_assist.set_state
+                target:
+                  entity_id: "{{ target_satellite_device }}"
+                data:
+                  mode: music
+                  title: ""
+                  message_font_size: 5vw
+              - action: view_assist.navigate
+                data:
+                  device: "{{ target_satellite_device }}"
+                  path: "{{ view_path }}"
+              - action: music_assistant.play_media
+                target:
+                  entity_id: "{{ target_musicplayer_device }}"
+                data:
+                  media_type: track
+                  enqueue: replace
+                  media_id: "{{ random_tracks['items'] | map(attribute='uri') | list }}"
+              - if:
+                  - condition: template
+                    value_template: "{{ target_use_announce is not false }}"
+                then:
+                  - variables:
+                      conversation_response: "{{ translations[language]['responses']['random_done'] }}"
+                  - set_conversation_response: "{{ conversation_response }}"
+                  - action: view_assist.set_state
+                    target:
+                      entity_id: "{{ target_satellite_device }}"
+                    data:
+                      last_said: "{{ conversation_response }}"
+                else:
+                  - set_conversation_response: ""
+            else:
+              - if:
+                  - condition: template
+                    value_template: "{{ target_use_announce is not false }}"
+                then:
+                  - variables:
+                      conversation_response: "{{ translations[language]['responses']['random_empty'] }}"
+                  - set_conversation_response: "{{ conversation_response }}"
+                  - action: view_assist.set_state
+                    target:
+                      entity_id: "{{ target_satellite_device }}"
+                    data:
+                      last_said: "{{ conversation_response }}"
+                else:
+                  - set_conversation_response: ""
+      - conditions:
+          - condition: trigger
+            id:
+              - whatsnext
+        sequence:
+          - variables:
+              ma_nowplaying_player: >-
+                {% if states(target_musicplayer_device) == 'playing' %}{{ target_musicplayer_device }}{% else %}{% set ns = namespace(leader='') %}{% for e in integration_entities('music_assistant') if e.startswith('media_player.') %}{% if ns.leader == '' and states(e) == 'playing' %}{% set ns.leader = e %}{% endif %}{% endfor %}{{ ns.leader }}{% endif %}
+          - alias: List upcoming tracks or report nothing is playing
+            if:
+              - condition: template
+                value_template: "{{ ma_nowplaying_player == '' }}"
+            then:
+              - variables:
+                  conversation_response: "{{ translations[language]['responses']['nowplaying_nothing'] }}"
+              - set_conversation_response: "{{ conversation_response }}"
+              - action: view_assist.set_state
+                target:
+                  entity_id: "{{ target_satellite_device }}"
+                data:
+                  last_said: "{{ conversation_response }}"
+            else:
+              - action: music_assistant.get_queue
+                target:
+                  entity_id: "{{ ma_nowplaying_player }}"
+                data: {}
+                response_variable: ma_queue
+              - variables:
+                  ma_upcoming: >-
+                    {% set q = ma_queue[ma_nowplaying_player] | default({}) %}
+                    {% set nxt = q.get('next_item') if q is mapping else none %}
+                    {% set ns = namespace(name='') %}
+                    {% if nxt is mapping %}
+                      {% set ns.name = nxt.get('name', '') %}
+                      {% if ns.name == '' and nxt.get('media_item') is mapping %}{% set ns.name = nxt['media_item'].get('name', '') %}{% endif %}
+                    {% endif %}
+                    {{ ns.name }}
+              - alias: Report the upcoming tracks if there are any
+                if:
+                  - condition: template
+                    value_template: "{{ (ma_upcoming | trim) != '' }}"
+                then:
+                  - variables:
+                      conversation_response: >-
+                        {{ translations[language]['responses']['upcoming'].replace("{tracks}", ma_upcoming | trim) }}
+                  - set_conversation_response: "{{ conversation_response | trim }}"
+                  - action: view_assist.set_state
+                    target:
+                      entity_id: "{{ target_satellite_device }}"
+                    data:
+                      last_said: "{{ conversation_response | trim }}"
+                else:
+                  - variables:
+                      conversation_response: "{{ translations[language]['responses']['queue_empty'] }}"
+                  - set_conversation_response: "{{ conversation_response }}"
+                  - action: view_assist.set_state
+                    target:
+                      entity_id: "{{ target_satellite_device }}"
+                    data:
+                      last_said: "{{ conversation_response }}"
+      # <<<<< NEW CODE END (Tier 2 get_library + queue lookahead branches) <<<<<
+      # >>>>> NEW CODE BEGIN (Tier 3 branches) >>>>>
+      - conditions:
+          - condition: trigger
+            id:
+              - shuffleon
+        sequence:
+          - action: media_player.shuffle_set
+            target:
+              entity_id: "{{ target_musicplayer_device }}"
+            data:
+              shuffle: true
+          - if:
+              - condition: template
+                value_template: "{{ target_use_announce is not false }}"
+            then:
+              - variables:
+                  conversation_response: "{{ translations[language]['responses']['shuffle_on'] }}"
+              - set_conversation_response: "{{ conversation_response }}"
+              - action: view_assist.set_state
+                target:
+                  entity_id: "{{ target_satellite_device }}"
+                data:
+                  last_said: "{{ conversation_response }}"
+            else:
+              - set_conversation_response: ""
+      - conditions:
+          - condition: trigger
+            id:
+              - shuffleoff
+        sequence:
+          - action: media_player.shuffle_set
+            target:
+              entity_id: "{{ target_musicplayer_device }}"
+            data:
+              shuffle: false
+          - if:
+              - condition: template
+                value_template: "{{ target_use_announce is not false }}"
+            then:
+              - variables:
+                  conversation_response: "{{ translations[language]['responses']['shuffle_off'] }}"
+              - set_conversation_response: "{{ conversation_response }}"
+              - action: view_assist.set_state
+                target:
+                  entity_id: "{{ target_satellite_device }}"
+                data:
+                  last_said: "{{ conversation_response }}"
+            else:
+              - set_conversation_response: ""
+      - conditions:
+          - condition: trigger
+            id:
+              - repeatoff
+        sequence:
+          - action: media_player.repeat_set
+            target:
+              entity_id: "{{ target_musicplayer_device }}"
+            data:
+              repeat: "off"
+          - if:
+              - condition: template
+                value_template: "{{ target_use_announce is not false }}"
+            then:
+              - variables:
+                  conversation_response: "{{ translations[language]['responses']['repeat_off'] }}"
+              - set_conversation_response: "{{ conversation_response }}"
+              - action: view_assist.set_state
+                target:
+                  entity_id: "{{ target_satellite_device }}"
+                data:
+                  last_said: "{{ conversation_response }}"
+            else:
+              - set_conversation_response: ""
+      - conditions:
+          - condition: trigger
+            id:
+              - repeatone
+        sequence:
+          - action: media_player.repeat_set
+            target:
+              entity_id: "{{ target_musicplayer_device }}"
+            data:
+              repeat: one
+          - if:
+              - condition: template
+                value_template: "{{ target_use_announce is not false }}"
+            then:
+              - variables:
+                  conversation_response: "{{ translations[language]['responses']['repeat_one'] }}"
+              - set_conversation_response: "{{ conversation_response }}"
+              - action: view_assist.set_state
+                target:
+                  entity_id: "{{ target_satellite_device }}"
+                data:
+                  last_said: "{{ conversation_response }}"
+            else:
+              - set_conversation_response: ""
+      - conditions:
+          - condition: trigger
+            id:
+              - repeatall
+        sequence:
+          - action: media_player.repeat_set
+            target:
+              entity_id: "{{ target_musicplayer_device }}"
+            data:
+              repeat: all
+          - if:
+              - condition: template
+                value_template: "{{ target_use_announce is not false }}"
+            then:
+              - variables:
+                  conversation_response: "{{ translations[language]['responses']['repeat_all'] }}"
+              - set_conversation_response: "{{ conversation_response }}"
+              - action: view_assist.set_state
+                target:
+                  entity_id: "{{ target_satellite_device }}"
+                data:
+                  last_said: "{{ conversation_response }}"
+            else:
+              - set_conversation_response: ""
+      - conditions:
+          - condition: trigger
+            id:
+              - clearqueue
+        sequence:
+          - action: media_player.clear_playlist
+            target:
+              entity_id: "{{ target_musicplayer_device }}"
+          - if:
+              - condition: template
+                value_template: "{{ target_use_announce is not false }}"
+            then:
+              - variables:
+                  conversation_response: "{{ translations[language]['responses']['clear_queue'] }}"
+              - set_conversation_response: "{{ conversation_response }}"
+              - action: view_assist.set_state
+                target:
+                  entity_id: "{{ target_satellite_device }}"
+                data:
+                  last_said: "{{ conversation_response }}"
+            else:
+              - set_conversation_response: ""
+      - conditions:
+          - condition: trigger
+            id:
+              - stopplayback
+        sequence:
+          - action: media_player.media_stop
+            target:
+              entity_id: "{{ target_musicplayer_device }}"
+          - if:
+              - condition: template
+                value_template: "{{ target_use_announce is not false }}"
+            then:
+              - variables:
+                  conversation_response: "{{ translations[language]['responses']['stop_playback'] }}"
+              - set_conversation_response: "{{ conversation_response }}"
+              - action: view_assist.set_state
+                target:
+                  entity_id: "{{ target_satellite_device }}"
+                data:
+                  last_said: "{{ conversation_response }}"
+            else:
+              - set_conversation_response: ""
+      - conditions:
+          - condition: trigger
+            id:
+              - selectsource
+        sequence:
+          - action: media_player.select_source
+            target:
+              entity_id: "{{ target_musicplayer_device }}"
+            data:
+              source: "{{ trigger.slots.source }}"
+          - if:
+              - condition: template
+                value_template: "{{ target_use_announce is not false }}"
+            then:
+              - variables:
+                  conversation_response: >-
+                    {{ translations[language]['responses']['select_source'].replace("{source}", trigger.slots.source) }}
+              - set_conversation_response: "{{ conversation_response }}"
+              - action: view_assist.set_state
+                target:
+                  entity_id: "{{ target_satellite_device }}"
+                data:
+                  last_said: "{{ conversation_response }}"
+            else:
+              - set_conversation_response: ""
+      - conditions:
+          - condition: trigger
+            id:
+              - jointarget
+        sequence:
+          - variables:
+              ma_leader: >-
+                {% set ns = namespace(leader='') %}
+                {% for e in integration_entities('music_assistant') if e.startswith('media_player.') %}
+                  {% if ns.leader == '' and states(e) == 'playing' %}{% set ns.leader = e %}{% endif %}
+                {% endfor %}
+                {{ ns.leader }}
+              ma_target: >-
+                {% set query = (trigger.slots.target | default('')) | lower | trim %}
+                {% set amap = join_alias_map | default({}, true) %}
+                {% set ns = namespace(match='') %}
+                {% for k, v in amap.items() %}
+                  {% if ns.match == '' and (k | string | lower | trim) == query %}{% set ns.match = v %}{% endif %}
+                {% endfor %}
+                {% if ns.match == '' %}
+                  {% for e in integration_entities('music_assistant') if e.startswith('media_player.') %}
+                    {% set fn = state_attr(e, 'friendly_name') | default('') | lower %}
+                    {% if ns.match == '' and query != '' and (query in fn or fn in query) %}{% set ns.match = e %}{% endif %}
+                  {% endfor %}
+                {% endif %}
+                {{ ns.match }}
+          - alias: Join only if music is playing and the named player resolved
+            choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ ma_leader == '' }}"
+                alias: Nothing is playing
+                sequence:
+                  - if:
+                      - condition: template
+                        value_template: "{{ target_use_announce is not false }}"
+                    then:
+                      - variables:
+                          conversation_response: "{{ translations[language]['responses']['join_nothing_playing'] }}"
+                      - set_conversation_response: "{{ conversation_response }}"
+                      - action: view_assist.set_state
+                        target:
+                          entity_id: "{{ target_satellite_device }}"
+                        data:
+                          last_said: "{{ conversation_response }}"
+                    else:
+                      - set_conversation_response: ""
+              - conditions:
+                  - condition: template
+                    value_template: "{{ ma_target == '' }}"
+                alias: Named player not found
+                sequence:
+                  - if:
+                      - condition: template
+                        value_template: "{{ target_use_announce is not false }}"
+                    then:
+                      - variables:
+                          conversation_response: >-
+                            {{ translations[language]['responses']['join_not_found'].replace("{target}", trigger.slots.target | default('')) }}
+                      - set_conversation_response: "{{ conversation_response }}"
+                      - action: view_assist.set_state
+                        target:
+                          entity_id: "{{ target_satellite_device }}"
+                        data:
+                          last_said: "{{ conversation_response }}"
+                    else:
+                      - set_conversation_response: ""
+            default:
+              - action: media_player.join
+                target:
+                  entity_id: "{{ ma_leader }}"
+                data:
+                  group_members: "{{ [ma_target] }}"
+              - if:
+                  - condition: template
+                    value_template: "{{ target_use_announce is not false }}"
+                then:
+                  - variables:
+                      conversation_response: >-
+                        {{ translations[language]['responses']['join_found'].replace("{target}", state_attr(ma_target, 'friendly_name') | default(trigger.slots.target)) }}
+                  - set_conversation_response: "{{ conversation_response }}"
+                  - action: view_assist.set_state
+                    target:
+                      entity_id: "{{ target_satellite_device }}"
+                    data:
+                      last_said: "{{ conversation_response }}"
+                else:
+                  - set_conversation_response: ""
+      - conditions:
+          - condition: trigger
+            id:
+              - joinhere
+        sequence:
+          - variables:
+              ma_leader: >-
+                {% set ns = namespace(leader='') %}
+                {% for e in integration_entities('music_assistant') if e.startswith('media_player.') %}
+                  {% if ns.leader == '' and states(e) == 'playing' %}{% set ns.leader = e %}{% endif %}
+                {% endfor %}
+                {{ ns.leader }}
+          - alias: Join this player if something is playing
+            if:
+              - condition: template
+                value_template: "{{ ma_leader == '' }}"
+            then:
+              - if:
+                  - condition: template
+                    value_template: "{{ target_use_announce is not false }}"
+                then:
+                  - variables:
+                      conversation_response: "{{ translations[language]['responses']['join_nothing_playing'] }}"
+                  - set_conversation_response: "{{ conversation_response }}"
+                  - action: view_assist.set_state
+                    target:
+                      entity_id: "{{ target_satellite_device }}"
+                    data:
+                      last_said: "{{ conversation_response }}"
+                else:
+                  - set_conversation_response: ""
+            else:
+              - action: media_player.join
+                target:
+                  entity_id: "{{ ma_leader }}"
+                data:
+                  group_members: "{{ [target_musicplayer_device] }}"
+              - if:
+                  - condition: template
+                    value_template: "{{ target_use_announce is not false }}"
+                then:
+                  - variables:
+                      conversation_response: "{{ translations[language]['responses']['join_here'] }}"
+                  - set_conversation_response: "{{ conversation_response }}"
+                  - action: view_assist.set_state
+                    target:
+                      entity_id: "{{ target_satellite_device }}"
+                    data:
+                      last_said: "{{ conversation_response }}"
+                else:
+                  - set_conversation_response: ""
+      - conditions:
+          - condition: trigger
+            id:
+              - unjoin
+        sequence:
+          - action: media_player.unjoin
+            target:
+              entity_id: "{{ target_musicplayer_device }}"
+          - if:
+              - condition: template
+                value_template: "{{ target_use_announce is not false }}"
+            then:
+              - variables:
+                  conversation_response: "{{ translations[language]['responses']['unjoin_done'] }}"
+              - set_conversation_response: "{{ conversation_response }}"
+              - action: view_assist.set_state
+                target:
+                  entity_id: "{{ target_satellite_device }}"
+                data:
+                  last_said: "{{ conversation_response }}"
+            else:
+              - set_conversation_response: ""
+      # <<<<< NEW CODE END (Tier 3 branches) <<<<<
