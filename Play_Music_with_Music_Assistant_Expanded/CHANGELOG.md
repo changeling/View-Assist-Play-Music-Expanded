@@ -4,13 +4,13 @@ All notable changes to **View Assist – Play Music with Music Assistant (Expand
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Versions in the `0.x` range indicate beta status — commands and behavior may change before `1.0.0`.
 
-This is an expanded fork of dinki's *Play Music with Music Assistant* blueprint (v1.2.7). Version numbers here are independent of the original project's numbering.
+This is an expanded fork of dinki's [*Play Music with Music Assistant*](https://github.com/dinki/View-Assist/tree/main/View_Assist_custom_sentences/Play_Music_with_Music_Assistant) blueprint (v1.2.7). Version numbers here are independent of the original project's numbering.
 
 ---
 
 ## [0.1.0] – 2026-06-14
 
-First tracked release of the Expanded edition. Everything in **Added** is new relative to the original v1.2.7, which provided only: play artist, play playlist, play song, and queue song.
+First tracked release of the Expanded edition. Everything in **Added** is new relative to the original v1.2.7, which provided: play artist, play playlist, play song, and queue song.
 
 ### Added
 
@@ -53,6 +53,5 @@ First tracked release of the Expanded edition. Everything in **Added** is new re
 ### Notes
 - Eight languages are supported (ca, de, en, es, nl, pl, pt, ro). English strings are exact; the others are best-effort and would benefit from native-speaker review.
 - "What's next" reports only the next track. Music Assistant's `get_queue` is intentionally limited to the current and next item, so full-queue listing is not available through it.
-- This release validates structurally; the underlying Music Assistant actions still warrant a live test in your environment (see the README).
 
 [0.1.0]: https://github.com/changeling/View-Assist-Play-Music-Expanded/releases/tag/v0.1.0
