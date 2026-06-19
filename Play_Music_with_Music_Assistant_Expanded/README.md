@@ -20,9 +20,9 @@ You'll need:
 
 Click the button below. It opens the blueprint import dialog in your own Home Assistant, with the address already filled in — just confirm.
 
-[![Open your Home Assistant instance and show the blueprint import dialog with a specific blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fchangeling%2FView-Assist-Automations%2Fblob%2Fmain%2FPlay_Music_with_Music_Assistant_Expanded%2Fblueprint-playmusicwithmusicassistantexpanded.yaml)
+[![Open your Home Assistant instance and show the blueprint import dialog with a specific blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fchangeling%2FView-Assist-Play-Music-Expanded%2Fblob%2Fmain%2FPlay_Music_with_Music_Assistant_Expanded%2Fblueprint-playmusicwithmusicassistantexpanded.yaml)
 
-If the badge doesn't render, use this link: [My Home Assistant import link](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fchangeling%2FView-Assist-Automations%2Fblob%2Fmain%2FPlay_Music_with_Music_Assistant_Expanded%2Fblueprint-playmusicwithmusicassistantexpanded.yaml)
+If the badge doesn't render, use this link: [My Home Assistant import link](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fchangeling%2FView-Assist-Play-Music-Expanded%2Fblob%2Fmain%2FPlay_Music_with_Music_Assistant_Expanded%2Fblueprint-playmusicwithmusicassistantexpanded.yaml)
 
 ### Option 2 — Manual import
 
@@ -31,10 +31,10 @@ If the badge doesn't render, use this link: [My Home Assistant import link](http
 3. Paste this address and import:
 
    ```
-   https://github.com/changeling/View-Assist-Automations/blob/main/Play_Music_with_Music_Assistant_Expanded/blueprint-playmusicwithmusicassistantexpanded.yaml
+   https://github.com/changeling/View-Assist-Play-Music-Expanded/blob/main/Play_Music_with_Music_Assistant_Expanded/blueprint-playmusicwithmusicassistantexpanded.yaml
    ```
 
-You can also view or download the blueprint file directly here: [blueprint-playmusicwithmusicassistantexpanded.yaml](https://github.com/changeling/View-Assist-Automations/blob/main/Play_Music_with_Music_Assistant_Expanded/blueprint-playmusicwithmusicassistantexpanded.yaml).
+You can also view or download the blueprint file directly here: [blueprint-playmusicwithmusicassistantexpanded.yaml](https://github.com/changeling/View-Assist-Play-Music-Expanded/blob/main/Play_Music_with_Music_Assistant_Expanded/blueprint-playmusicwithmusicassistantexpanded.yaml).
 
 ### After importing
 

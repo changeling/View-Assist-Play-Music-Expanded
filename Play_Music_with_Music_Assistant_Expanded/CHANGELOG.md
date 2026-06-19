@@ -55,4 +55,4 @@ First tracked release of the Expanded edition. Everything in **Added** is new re
 - "What's next" reports only the next track. Music Assistant's `get_queue` is intentionally limited to the current and next item, so full-queue listing is not available through it.
 - This release validates structurally; the underlying Music Assistant actions still warrant a live test in your environment (see the README).
 
-[0.1.0]: https://github.com/changeling/View-Assist-Automations/tree/main/Play_Music_with_Music_Assistant_Expanded
+[0.1.0]: https://github.com/changeling/View-Assist-Play-Music-Expanded/releases/tag/v0.1.0
