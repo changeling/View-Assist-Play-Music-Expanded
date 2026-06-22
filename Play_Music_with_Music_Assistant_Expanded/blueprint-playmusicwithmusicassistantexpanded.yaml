@@ -73,6 +73,36 @@ blueprint:
       name: Play Radio Station Command
       description: The command to play a radio station by name
       default: (play [the] radio station {radio} | start [the] radio station {radio} | play {radio} (radio | station))
+    station_aliases:
+      name: Radio Station Aliases
+      description:
+        Optional list mapping spoken station phrases to a Music Assistant radio
+        media id, for stations that search does not resolve reliably. Spoken
+        phrase is what you say; Media id is the exact station to play; Station
+        name is an optional friendly name for the spoken reply. Aliases match
+        case-insensitively and take priority; any spoken station not listed
+        falls back to a normal search. Leave empty to rely on search only.
+      default: []
+      selector:
+        object:
+          label_field: alias
+          multiple: true
+          fields:
+            alias:
+              label: Spoken phrase
+              required: true
+              selector:
+                text:
+            media_id:
+              label: Media id
+              required: true
+              selector:
+                text:
+            station_name:
+              label: Station name (optional)
+              required: false
+              selector:
+                text:
     radio_mode_command:
       name: Radio Mode Command
       description:
@@ -364,6 +394,7 @@ actions:
       join_alias_map: !input join_alias_map
       # >>>>> NEW CODE BEGIN (Tier 2 announcement variable wiring) >>>>>
       announcement_url_map: !input announcement_url_map
+      station_aliases: !input station_aliases
       # >>>>> NEW CODE BEGIN (Tier 2 random_count wiring) >>>>>
       random_count: !input random_count
       # <<<<< NEW CODE END (Tier 2 random_count wiring) <<<<<
@@ -1116,69 +1147,135 @@ actions:
             id:
               - playradio
         sequence:
-          - action: music_assistant.search
-            data:
-              limit: 1
-              config_entry_id: "{{ ma_instance }}"
-              media_type:
-                - radio
-              name: "{{ trigger.slots.radio }}"
-            response_variable: found_radio
-          - alias: Did we find a radio station?
-            if:
-              - condition: template
-                value_template: "{{found_radio['radio'] | count>0}}"
-                alias: We found a radio station!
-            then:
-              - action: view_assist.set_state
-                target:
-                  entity_id: "{{ target_satellite_device }}"
-                data:
-                  mode: music
-                  title: ""
-                  message_font_size: 5vw
-              - action: view_assist.navigate
-                data:
-                  device: "{{ target_satellite_device }}"
-                  path: "{{ view_path }}"
-              - action: music_assistant.play_media
-                target:
-                  entity_id: "{{ target_musicplayer_device }}"
-                data:
-                  media_type: radio
-                  enqueue: replace
-                  media_id: "{{ found_radio.radio.0.name }}"
-              - if:
+          # >>>>> NEW CODE BEGIN (radio station alias resolution) >>>>>
+          - variables:
+              spoken_radio: >-
+                {% set d = trigger.details if trigger.details is defined and trigger.details is mapping else {} %}
+                {% set s = trigger.slots if trigger.slots is defined and trigger.slots is mapping else {} %}
+                {% set detail = d.get('radio') if d is mapping else none %}
+                {{ (detail.get('text') if detail is mapping and detail.get('text') is not none else s.get('radio', '')) | string | trim }}
+              alias_media_id: >-
+                {% set spoken = spoken_radio | lower | trim %}
+                {% set ns = namespace(value='') %}
+                {% for item in station_aliases if item is mapping %}
+                  {% set item_alias = item.alias | default('') | string | lower | trim %}
+                  {% if ns.value == '' and spoken != '' and item_alias == spoken %}{% set ns.value = item.media_id | default('') | string | trim %}{% endif %}
+                {% endfor %}
+                {{ ns.value }}
+              alias_station_name: >-
+                {% set spoken = spoken_radio | lower | trim %}
+                {% set ns = namespace(value='') %}
+                {% for item in station_aliases if item is mapping %}
+                  {% set item_alias = item.alias | default('') | string | lower | trim %}
+                  {% if ns.value == '' and spoken != '' and item_alias == spoken %}{% set ns.value = item.station_name | default(item.alias | default(spoken_radio)) | string | trim %}{% endif %}
+                {% endfor %}
+                {{ ns.value }}
+          - alias: Play an aliased station directly, otherwise fall back to search
+            choose:
+              - conditions:
                   - condition: template
-                    value_template: "{{ target_use_announce is not false }}"
-                then:
-                  - variables:
-                      conversation_response: >-
-                        {{ translations[language]['responses']['playradio_found'].replace("{radio}", found_radio.radio.0.name) }}
-                  - set_conversation_response: "{{ conversation_response }}"
+                    value_template: "{{ alias_media_id != '' }}"
+                    alias: A station alias matched
+                sequence:
                   - action: view_assist.set_state
                     target:
                       entity_id: "{{ target_satellite_device }}"
                     data:
-                      last_said: "{{ conversation_response }}"
-                else:
-                  - set_conversation_response: ""
-            else:
-              - if:
+                      mode: music
+                      title: ""
+                      message_font_size: 5vw
+                  - action: view_assist.navigate
+                    data:
+                      device: "{{ target_satellite_device }}"
+                      path: "{{ view_path }}"
+                  - action: music_assistant.play_media
+                    target:
+                      entity_id: "{{ target_musicplayer_device }}"
+                    data:
+                      media_type: radio
+                      enqueue: replace
+                      media_id: "{{ alias_media_id }}"
+                  - if:
+                      - condition: template
+                        value_template: "{{ target_use_announce is not false }}"
+                    then:
+                      - variables:
+                          conversation_response: >-
+                            {{ translations[language]['responses']['playradio_found'].replace("{radio}", alias_station_name) }}
+                      - set_conversation_response: "{{ conversation_response }}"
+                      - action: view_assist.set_state
+                        target:
+                          entity_id: "{{ target_satellite_device }}"
+                        data:
+                          last_said: "{{ conversation_response }}"
+                    else:
+                      - set_conversation_response: ""
+            default:
+              # <<<<< original search-based resolution (now the fallback) <<<<<
+              - action: music_assistant.search
+                data:
+                  limit: 1
+                  config_entry_id: "{{ ma_instance }}"
+                  media_type:
+                    - radio
+                  name: "{{ spoken_radio }}"
+                response_variable: found_radio
+              - alias: Did we find a radio station?
+                if:
                   - condition: template
-                    value_template: "{{ target_use_announce is not false }}"
+                    value_template: "{{found_radio['radio'] | count>0}}"
+                    alias: We found a radio station!
                 then:
-                  - variables:
-                      conversation_response: >-
-                        {{ translations[language]['responses']['playradio_not_found'].replace("{search_radio}", trigger.slots.radio) }}
-                  - set_conversation_response: "{{ conversation_response }}"
                   - action: view_assist.set_state
                     target:
                       entity_id: "{{ target_satellite_device }}"
                     data:
-                      last_said: "{{ conversation_response }}"
+                      mode: music
+                      title: ""
+                      message_font_size: 5vw
+                  - action: view_assist.navigate
+                    data:
+                      device: "{{ target_satellite_device }}"
+                      path: "{{ view_path }}"
+                  - action: music_assistant.play_media
+                    target:
+                      entity_id: "{{ target_musicplayer_device }}"
+                    data:
+                      media_type: radio
+                      enqueue: replace
+                      media_id: "{{ found_radio.radio.0.name }}"
+                  - if:
+                      - condition: template
+                        value_template: "{{ target_use_announce is not false }}"
+                    then:
+                      - variables:
+                          conversation_response: >-
+                            {{ translations[language]['responses']['playradio_found'].replace("{radio}", found_radio.radio.0.name) }}
+                      - set_conversation_response: "{{ conversation_response }}"
+                      - action: view_assist.set_state
+                        target:
+                          entity_id: "{{ target_satellite_device }}"
+                        data:
+                          last_said: "{{ conversation_response }}"
+                    else:
+                      - set_conversation_response: ""
                 else:
-                  - set_conversation_response: ""
+                  - if:
+                      - condition: template
+                        value_template: "{{ target_use_announce is not false }}"
+                    then:
+                      - variables:
+                          conversation_response: >-
+                            {{ translations[language]['responses']['playradio_not_found'].replace("{search_radio}", spoken_radio) }}
+                      - set_conversation_response: "{{ conversation_response }}"
+                      - action: view_assist.set_state
+                        target:
+                          entity_id: "{{ target_satellite_device }}"
+                        data:
+                          last_said: "{{ conversation_response }}"
+                    else:
+                      - set_conversation_response: ""
+          # <<<<< NEW CODE END (radio station alias resolution) <<<<<
       - conditions:
           - condition: trigger
             id:

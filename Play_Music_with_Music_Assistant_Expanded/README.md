@@ -151,6 +151,14 @@ Add as many rows as you like, and you can point several spoken phrases at the sa
 
 With those set, "play the doorbell announcement" plays that clip. Leave it empty if you only want spoken announcements.
 
+**Radio Station Aliases** — *(optional)* for radio stations that don't come up reliably when you just say their name. Click **Add** for each station and fill in:
+
+- **Spoken phrase** — what you say (e.g. `the beeb`)
+- **Media id** — the exact Music Assistant radio station to play (e.g. `BBC Radio 1`)
+- **Station name** — *(optional)* a friendly name for the spoken reply; if left blank, the spoken phrase is used
+
+Aliased stations take priority; anything not listed falls back to a normal search, so you only need entries for the stations search struggles with.
+
 **Random Track Count** — how many songs "play some random music" should queue up. Default is 25.
 
 ### A note on announcements and ducking

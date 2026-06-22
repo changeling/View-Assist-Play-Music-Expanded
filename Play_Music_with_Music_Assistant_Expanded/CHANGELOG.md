@@ -10,6 +10,9 @@ This is an expanded fork of dinki's [*Play Music with Music Assistant*](https://
 
 ## [0.2.0] — Unreleased
 
+### Added
+- **Radio station aliases.** The "play radio station" command can now resolve spoken station names against an optional alias list (*Radio Station Aliases*) — each entry pairs a spoken phrase with the exact Music Assistant radio media id and an optional friendly name. Aliases take priority and match case-insensitively; any station not listed falls back to the normal search, so existing behavior is unchanged. Useful for stations that search resolves poorly.
+
 ### Changed
 - **Breaking:** the **Join Alias Map** and **Announcement Sound Map** inputs now use a structured, repeatable list of labeled fields instead of a freeform key/value object. The editor experience is clearer (click *Add*, fill labeled boxes), but **existing alias maps must be re-entered** — values saved under the old object format will not carry over. Join entries are now *Spoken phrase* + *Player entity_id*; Announcement entries are *Spoken name* + *Sound URL*. Aliases still match case-insensitively, and Join still falls back to friendly-name matching when no alias is listed.
 
