@@ -244,6 +244,20 @@ Every command is built from four pieces that live in four places in the file. To
 
 Eight languages are supported. The English strings are exact; the other seven were produced as best-effort and should be reviewed by native speakers before any upstream contribution. Any new response key must be added to all eight, or the language lookup will fail when that language is active.
 
+### Releasing (maintainer checklist)
+
+This project uses independent semantic versioning in the `0.x` beta range — patch (`x.y.Z`) for fixes, minor (`x.Y.0`) for new commands or behavior changes, `1.0.0` when stable. Breaking changes are acceptable during `0.x` but must be flagged. To cut a release:
+
+1. Land all changes on `main` and confirm the blueprint validates as a single YAML document.
+2. Bump the version in **two** places in the blueprint — the `# Version:` header comment and the `vX.Y.Z` in the `description:`. Home Assistant blueprints have no native version field, so both must move together; the `description:` is the only version a user sees in the HA UI.
+3. In `CHANGELOG.md`, give the top `[X.Y.Z]` section its date (replace "Unreleased").
+4. Write `RELEASE_NOTES_vX.Y.Z.md` from that CHANGELOG section: add a one-line framing of the release, foreground any breaking change with an "action required" note and an *Upgrading* step, and append the install block (My Home Assistant badge + import link + README link).
+5. Commit and push to `main`.
+6. On GitHub: **Releases → Draft a new release → Choose a tag** `vX.Y.Z` (create on publish) → **Target** `main` → title `vX.Y.Z` → paste the release notes → tick **Set as a pre-release** (for `0.x`) → **Publish**. Do not use *Generate release notes* while the repo keeps curated notes.
+7. Verify the release/tag resolves and the CHANGELOG's version link works.
+
+Install links stay on `/main/` during the beta so testers always get the latest; pin them to a tag (`/vX.Y.Z/`) only once a version is considered stable.
+
 ---
 
 ## Credits
