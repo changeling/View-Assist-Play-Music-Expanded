@@ -1,6 +1,6 @@
 # =============================================================================
 # View Assist - Play Music with Music Assistant (Expanded)
-# Version: 0.2.1
+# Version: 0.3.0
 # Date:    2026-06-26
 # Based on: dinki's "Play Music with Music Assistant" v1.2.7
 # Changelog: see CHANGELOG.md
@@ -11,7 +11,7 @@ blueprint:
   description:
     Voice control for Music Assistant from a View Assist satellite - play music,
     control playback, manage the queue, move audio between rooms, make
-    announcements, and more. Expanded edition v0.2.1, based on Play Music with
+    announcements, and more. Expanded edition v0.3.0, based on Play Music with
     Music Assistant v1.2.7. See CHANGELOG.md for the full list of changes.
   domain: automation
   input:
@@ -69,6 +69,17 @@ blueprint:
       name: Play Album Command
       description: The command to play an album, optionally by a named artist
       default: (play [the] album {album} by {artist} | play [the] album {album})
+    queue_album_command:
+      name: Queue Album Command
+      description: The command to queue an album to play next, optionally by a named artist
+      default: ((queue | cue) [the] album {album} by {artist} | (queue | cue) [the] album {album})
+    add_album_command:
+      name: Add Album To Queue Command
+      description:
+        The command to add an album to the end of the queue, optionally by a
+        named artist. Distinct from the Queue Album command, which inserts the
+        album to play next.
+      default: ((add | append) [the] album {album} by {artist} [to [the] [end of [the]] queue] | (add | append) [the] album {album} [to [the] [end of [the]] queue])
     play_radio_command:
       name: Play Radio Station Command
       description: The command to play a radio station by name
@@ -305,6 +316,12 @@ trigger:
     command: !input play_album_command
     id: playalbum
   - trigger: conversation
+    command: !input queue_album_command
+    id: queuealbum
+  - trigger: conversation
+    command: !input add_album_command
+    id: addalbum
+  - trigger: conversation
     command: !input play_radio_command
     id: playradio
   - trigger: conversation
@@ -414,6 +431,8 @@ actions:
             playsong_queue: "Afegint a la cua {song} de {artist}"
             # >>>>> NEW CODE BEGIN (Tier 2 ca) >>>>>
             playalbum_found: "Reproduint l'àlbum {album}"
+            queuealbum_found: "Posaré l'àlbum {album} a continuació"
+            addalbum_found: "Afegint l'àlbum {album} al final de la cua"
             playalbum_not_found: "No he pogut trobar l'àlbum {search_album}"
             playradio_found: "Reproduint {radio}"
             playradio_not_found: "No he pogut trobar cap emissora anomenada {search_radio}"
@@ -468,6 +487,8 @@ actions:
             playsong_queue: Queuing {song} by {artist}
             # >>>>> NEW CODE BEGIN (Tier 2 en) >>>>>
             playalbum_found: Playing the album {album}
+            queuealbum_found: "Queuing the album {album} to play next"
+            addalbum_found: "Adding the album {album} to the end of the queue"
             playalbum_not_found: Sorry, I couldn't find the album {search_album}
             playradio_found: Playing {radio}
             playradio_not_found: Sorry, I couldn't find a radio station called {search_radio}
@@ -522,6 +543,8 @@ actions:
             playsong_queue: Füge {song} von {artist} zur Warteschlange hinzu
             # >>>>> NEW CODE BEGIN (Tier 2 de) >>>>>
             playalbum_found: Spiele das Album {album}
+            queuealbum_found: "Als Nächstes spiele ich das Album {album}"
+            addalbum_found: "Füge das Album {album} am Ende der Warteschlange hinzu"
             playalbum_not_found: Entschuldigung, ich konnte das Album {search_album} nicht finden
             playradio_found: Spiele {radio}
             playradio_not_found: Entschuldigung, ich konnte keinen Radiosender namens {search_radio} finden
@@ -576,6 +599,8 @@ actions:
             playsong_queue: "Añadiendo a la cola {song} de {artist}"
             # >>>>> NEW CODE BEGIN (Tier 2 es) >>>>>
             playalbum_found: "Reproduciendo el álbum {album}"
+            queuealbum_found: "Reproduciré el álbum {album} a continuación"
+            addalbum_found: "Añadiendo el álbum {album} al final de la cola"
             playalbum_not_found: "Lo siento, no he podido encontrar el álbum {search_album}"
             playradio_found: "Reproduciendo {radio}"
             playradio_not_found: "Lo siento, no he podido encontrar una emisora llamada {search_radio}"
@@ -630,6 +655,8 @@ actions:
             playsong_queue: "{song} van {artist} toevoegen aan de wachtrij"
             # >>>>> NEW CODE BEGIN (Tier 2 nl) >>>>>
             playalbum_found: Het album {album} afspelen
+            queuealbum_found: "Het album {album} wordt hierna afgespeeld"
+            addalbum_found: "Het album {album} aan het einde van de wachtrij toevoegen"
             playalbum_not_found: Sorry, ik kon het album {search_album} niet vinden
             playradio_found: "{radio} afspelen"
             playradio_not_found: Sorry, ik kon geen radiozender genaamd {search_radio} vinden
@@ -684,6 +711,8 @@ actions:
             playsong_queue: Dodaję do kolejki {song} od {artist}
             # >>>>> NEW CODE BEGIN (Tier 2 pl) >>>>>
             playalbum_found: Odtwarzam album {album}
+            queuealbum_found: "Album {album} zostanie odtworzony jako następny"
+            addalbum_found: "Dodaję album {album} na koniec kolejki"
             playalbum_not_found: Przepraszam, nie znaleziono albumu {search_album}
             playradio_found: Odtwarzam {radio}
             playradio_not_found: Przepraszam, nie znaleziono stacji radiowej o nazwie {search_radio}
@@ -738,6 +767,8 @@ actions:
             playsong_queue: Incluindo a música {song} por {artist} na lista
             # >>>>> NEW CODE BEGIN (Tier 2 pt) >>>>>
             playalbum_found: Tocando o álbum {album}
+            queuealbum_found: "O álbum {album} será reproduzido a seguir"
+            addalbum_found: "Adicionando o álbum {album} ao final da fila"
             playalbum_not_found: Desculpe, não consegui encontrar o álbum {search_album}
             playradio_found: Tocando {radio}
             playradio_not_found: Desculpe, não consegui encontrar uma estação de rádio chamada {search_radio}
@@ -792,6 +823,8 @@ actions:
             playsong_queue: Adaug în coadă {song} de {artist}
             # >>>>> NEW CODE BEGIN (Tier 2 ro) >>>>>
             playalbum_found: Redau albumul {album}
+            queuealbum_found: "Albumul {album} va fi redat în continuare"
+            addalbum_found: "Adaug albumul {album} la sfârșitul cozii"
             playalbum_not_found: Îmi pare rău, nu am găsit albumul {search_album}
             playradio_found: Redau {radio}
             playradio_not_found: Îmi pare rău, nu am găsit un post de radio numit {search_radio}
@@ -1078,6 +1111,7 @@ actions:
           - condition: trigger
             id:
               - playalbum
+              - queuealbum
         sequence:
           - action: music_assistant.search
             data:
@@ -1105,12 +1139,106 @@ actions:
                 data:
                   device: "{{ target_satellite_device }}"
                   path: "{{ view_path }}"
+              - alias: Set enqueue and response depending on playalbum or queuealbum trigger
+                choose:
+                  - conditions:
+                      - condition: trigger
+                        id:
+                          - playalbum
+                    sequence:
+                      - action: music_assistant.play_media
+                        target:
+                          entity_id: "{{ target_musicplayer_device }}"
+                        data:
+                          media_type: album
+                          enqueue: replace
+                          media_id: "{{ found_album.albums.0.name }}"
+                          artist: "{{ trigger.slots.artist | default('') }}"
+                      - if:
+                          - condition: template
+                            value_template: "{{ target_use_announce is not false }}"
+                        then:
+                          - variables:
+                              conversation_response: >-
+                                {{ translations[language]['responses']['playalbum_found'].replace("{album}", found_album.albums.0.name) }}
+                          - set_conversation_response: "{{ conversation_response }}"
+                          - action: view_assist.set_state
+                            target:
+                              entity_id: "{{ target_satellite_device }}"
+                            data:
+                              last_said: "{{ conversation_response }}"
+                        else:
+                          - set_conversation_response: ""
+                  - conditions:
+                      - condition: trigger
+                        id:
+                          - queuealbum
+                    sequence:
+                      - action: music_assistant.play_media
+                        target:
+                          entity_id: "{{ target_musicplayer_device }}"
+                        data:
+                          media_type: album
+                          enqueue: next
+                          media_id: "{{ found_album.albums.0.name }}"
+                          artist: "{{ trigger.slots.artist | default('') }}"
+                      - if:
+                          - condition: template
+                            value_template: "{{ target_use_announce is not false }}"
+                        then:
+                          - variables:
+                              conversation_response: >-
+                                {{ translations[language]['responses']['queuealbum_found'].replace("{album}", found_album.albums.0.name) }}
+                          - set_conversation_response: "{{ conversation_response }}"
+                          - action: view_assist.set_state
+                            target:
+                              entity_id: "{{ target_satellite_device }}"
+                            data:
+                              last_said: "{{ conversation_response }}"
+                        else:
+                          - set_conversation_response: ""
+            else:
+              - if:
+                  - condition: template
+                    value_template: "{{ target_use_announce is not false }}"
+                then:
+                  - variables:
+                      conversation_response: >-
+                        {{ translations[language]['responses']['playalbum_not_found'].replace("{search_album}", trigger.slots.album) }}
+                  - set_conversation_response: "{{ conversation_response }}"
+                  - action: view_assist.set_state
+                    target:
+                      entity_id: "{{ target_satellite_device }}"
+                    data:
+                      last_said: "{{ conversation_response }}"
+                else:
+                  - set_conversation_response: ""
+      - conditions:
+          - condition: trigger
+            id:
+              - addalbum
+        sequence:
+          - action: music_assistant.search
+            data:
+              limit: 1
+              config_entry_id: "{{ ma_instance }}"
+              media_type:
+                - album
+              name: "{{ trigger.slots.album }}"
+              artist: "{{ trigger.slots.artist | default('') }}"
+            response_variable: found_album
+          - alias: Did we find an album to add?
+            if:
+              - condition: template
+                value_template: "{{found_album['albums'] | count>0}}"
+                alias: We found an album!
+            then:
               - action: music_assistant.play_media
                 target:
                   entity_id: "{{ target_musicplayer_device }}"
                 data:
                   media_type: album
-                  enqueue: replace
+                  enqueue: add
                   media_id: "{{ found_album.albums.0.name }}"
                   artist: "{{ trigger.slots.artist | default('') }}"
               - if:
@@ -1119,7 +1247,7 @@ actions:
                 then:
                   - variables:
                       conversation_response: >-
-                        {{ translations[language]['responses']['playalbum_found'].replace("{album}", found_album.albums.0.name) }}
+                        {{ translations[language]['responses']['addalbum_found'].replace("{album}", found_album.albums.0.name) }}
                   - set_conversation_response: "{{ conversation_response }}"
                   - action: view_assist.set_state
                     target:

@@ -8,6 +8,12 @@ This is an expanded fork of dinki's [*Play Music with Music Assistant*](https://
 
 ---
 
+## [0.3.0] – 2026-06-26
+
+### Added
+- **Queue Album** command — queues an album to play next, after the current track, optionally by a named artist. Mirrors the Queue Song command. Default phrasing: "queue the album {album}" (optionally "… by {artist}").
+- **Add Album to Queue** command — appends an album to the end of the queue, optionally by a named artist. Mirrors the Add Song command. Default phrasing: "add the album {album} to the queue" (optionally "… by {artist}").
+
 ## [0.2.1] – 2026-06-26
 
 ### Changed
