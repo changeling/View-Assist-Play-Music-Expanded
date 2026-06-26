@@ -1,7 +1,7 @@
 # =============================================================================
 # View Assist - Play Music with Music Assistant (Expanded)
-# Version: 0.2.0
-# Date:    2026-06-22
+# Version: 0.2.1
+# Date:    2026-06-25
 # Based on: dinki's "Play Music with Music Assistant" v1.2.7
 # Changelog: see CHANGELOG.md
 # Status: beta (0.x) - commands and behavior may change before 1.0.0
@@ -11,7 +11,7 @@ blueprint:
   description:
     Voice control for Music Assistant from a View Assist satellite - play music,
     control playback, manage the queue, move audio between rooms, make
-    announcements, and more. Expanded edition v0.2.0, based on Play Music with
+    announcements, and more. Expanded edition v0.2.1, based on Play Music with
     Music Assistant v1.2.7. See CHANGELOG.md for the full list of changes.
   domain: automation
   input:
