@@ -10,6 +10,10 @@ This is an expanded fork of dinki's [*Play Music with Music Assistant*](https://
 
 ## [0.2.1] — Unreleased
 
+### Changed
+- **Join Alias Map** — the player field is now a filtered dropdown of Music Assistant players instead of a free-typed entity_id. Existing entries are unaffected (the stored value is still an entity_id).
+- **Repeat All** — the command now also accepts "repeat the album" / "repeat this album". Repeat-all loops the whole queue, which is the album when one is playing, so album phrasings route to the correct mode.
+
 ### Fixed
 - The **queue** command ("queue {song} by {artist}") now responds with the queue confirmation instead of the play confirmation ("Playing …"). The song was always queued correctly — only the spoken/displayed reply was wrong, as it reused the play response string. Present since v0.1.0.
 

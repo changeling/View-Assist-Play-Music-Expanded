@@ -223,7 +223,7 @@ blueprint:
     repeat_all_command:
       name: Repeat All Command
       description: The command to repeat the whole queue
-      default: (repeat all | repeat (the) (queue | playlist) | repeat everything)
+      default: (repeat all | repeat (this | the) album | repeat (the) (queue | playlist) | repeat everything)
     clear_queue_command:
       name: Clear Queue Command
       description: The command to clear the playback queue
